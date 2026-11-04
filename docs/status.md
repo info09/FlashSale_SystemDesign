@@ -53,8 +53,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 2.2 (Application): Tạo InventoryService, DeductInventoryCommand, DeductInventoryValidator trong FlashSale.Application
 - [x] Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
 - [x] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
-- [] Story 2.5 (Test): Viết unit test cho InventoryService (mock Redis Lua Script)
-- [] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers)
+- [x] Story 2.5 (Test): Viết unit test cho InventoryService (mock Redis Lua Script) — 5 test case pass
+- [x] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers) — 4 test case pass
 - [] Story 2.7 (Test): Viết e2e test kiểm tra luồng HTTP: đủ kho → trừ thành công, hết hàng → trả lỗi 400, không tạo Order
 - [] Story 2.8 (Perf): Đo p99 latency của AtomicInventoryOffloading mục tiêu ~18ms (NFR-01)
 
@@ -118,7 +118,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
 - **Story đang làm:** Tích hợp Scalar API documentation (FR-06, NFR-07 hỗ trợ quan sát API)
-- **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; viết unit test 5 case pass; build 0 error, tất cả 29 test case toàn dự án pass
+- **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; hoàn thành Story 2.5 (Test): unit test InventoryService 5 test case pass (mock IInventoryRepository); hoàn thành Story 2.6 (Test): integration test RedisInventoryIntegrationTest 4 test case pass (Testcontainers Redis thật, kiểm tra atomic không over-selling); build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
