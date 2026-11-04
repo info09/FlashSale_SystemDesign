@@ -30,7 +30,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 0.2: Thêm tham chiếu giữa các project tuân theo Dependency Rule (Domain không tham chiếu layer khác, Application chỉ tham chiếu Domain, Infrastructure tham chiếu Domain+Application, Api tham chiếu Application+Infrastructure, Worker tham chiếu Application+Infrastructure)
 - [x] Story 0.3: Cấu hình docker-compose.yml chạy toàn bộ dịch vụ: FlashSale.Api, FlashSale.Worker, Redis Cluster, RabbitMQ, PostgreSQLPrimary, ReadReplica, Prometheus, Grafana, k6
 - [x] Story 0.3b (sửa lỗi): Sửa Dockerfile Api/Worker (đường dẫn COPY sai, thêm .dockerignore), docker compose config pass
-- [] Story 0.4: Thiết lập secret management (.env.example không chứa giá trị thật, biến môi trường cho connection string PostgreSQLPrimary, ReadReplica, Redis, RabbitMQ)
+- [x] Story 0.4: Thiết lập secret management (.env.example không chứa giá trị thật, biến môi trường cho connection string PostgreSQLPrimary, ReadReplica, Redis, RabbitMQ)
+- [x] Story 0.4b (hoàn thiện): Sửa docker-compose.yml dùng ${BIẾN} lấy từ .env thay vì hardcode, cập nhật .env.example đầy đủ biến (bao gồm POSTGRES_*, RABBITMQ_DEFAULT_*), tạo .dockerignore
 - [] Story 0.5: Tạo pipeline CI-CD cơ bản (build .NET 8, chạy unit test, dừng pipeline nếu test fail)
 - [] Story 0.6: Viết integration test kiểm tra kết nối Docker Compose (tất cả service khởi động được, có thể ping nhau)
 
@@ -116,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 0.4 - Thiết lập secret management (.env.example không chứa giá trị thật, biến môi trường cho connection string PostgreSQLPrimary, ReadReplica, Redis, RabbitMQ)
-- **Lần cập nhật gần nhất:** Hoàn thành Story 0.3 (docker-compose.yml + .env.example + Dockerfile Api/Worker + prometheus.yml + .dockerignore, docker compose config pass, đã sửa lỗi COPY đường dẫn)
+- **Story đang làm:** Story 0.5 - Tạo pipeline CI-CD cơ bản (build .NET 8, chạy unit test, dừng pipeline nếu test fail)
+- **Lần cập nhật gần nhất:** Hoàn thành Story 0.4 + 0.4b (docker-compose.yml dùng ${BIẾN} lấy từ .env, .env.example đầy đủ 14 biến, .dockerignore, docker compose config pass, build .NET 0 error)
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

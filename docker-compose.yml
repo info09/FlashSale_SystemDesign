@@ -17,17 +17,17 @@ services:
       flashsale-postgres-primary:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
-      - POSTGRESQL_PRIMARY_CONNECTION_STRING=Host=flashsale-postgres-primary;Port=5432;Database=flashsale;Username=postgres;Password=postgres
-      - POSTGRESQL_REPLICA_CONNECTION_STRING=Host=flashsale-postgres-replica;Port=5432;Database=flashsale_replica;Username=postgres;Password=postgres
-      - REDIS_CONNECTION_STRING=flashsale-redis:6379
-      - RABBITMQ_CONNECTION_STRING=amqp://guest:guest@flashsale-rabbitmq:5672/
-      - RABBITMQ_QUEUE_NAME=order_pipeline_queue
-      - RABBITMQ_EXCHANGE_NAME=flash_sale_exchange
-      - RABBITMQ_ROUTING_KEY=order.created
-      - RATE_LIMIT_RPS=100
-      - CORRELATION_ID_HEADER=Correlation-Id
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://+:8080}
+      - POSTGRESQL_PRIMARY_CONNECTION_STRING=${POSTGRESQL_PRIMARY_CONNECTION_STRING}
+      - POSTGRESQL_REPLICA_CONNECTION_STRING=${POSTGRESQL_REPLICA_CONNECTION_STRING}
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING}
+      - RABBITMQ_CONNECTION_STRING=${RABBITMQ_CONNECTION_STRING}
+      - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME}
+      - RABBITMQ_EXCHANGE_NAME=${RABBITMQ_EXCHANGE_NAME}
+      - RABBITMQ_ROUTING_KEY=${RABBITMQ_ROUTING_KEY}
+      - RATE_LIMIT_RPS=${RATE_LIMIT_RPS}
+      - CORRELATION_ID_HEADER=${CORRELATION_ID_HEADER}
     ports:
       - "8080:8080"
     networks:
@@ -48,13 +48,13 @@ services:
       flashsale-postgres-primary:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - POSTGRESQL_PRIMARY_CONNECTION_STRING=Host=flashsale-postgres-primary;Port=5432;Database=flashsale;Username=postgres;Password=postgres
-      - RABBITMQ_CONNECTION_STRING=amqp://guest:guest@flashsale-rabbitmq:5672/
-      - RABBITMQ_QUEUE_NAME=order_pipeline_queue
-      - RABBITMQ_EXCHANGE_NAME=flash_sale_exchange
-      - RABBITMQ_ROUTING_KEY=order.created
-      - CORRELATION_ID_HEADER=Correlation-Id
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - POSTGRESQL_PRIMARY_CONNECTION_STRING=${POSTGRESQL_PRIMARY_CONNECTION_STRING}
+      - RABBITMQ_CONNECTION_STRING=${RABBITMQ_CONNECTION_STRING}
+      - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME}
+      - RABBITMQ_EXCHANGE_NAME=${RABBITMQ_EXCHANGE_NAME}
+      - RABBITMQ_ROUTING_KEY=${RABBITMQ_ROUTING_KEY}
+      - CORRELATION_ID_HEADER=${CORRELATION_ID_HEADER}
     networks:
       - flashsale-network
     restart: unless-stopped
@@ -84,8 +84,8 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: flashsale-rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -105,9 +105,9 @@ services:
     image: postgres:15-alpine
     container_name: flashsale-postgres-primary
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=flashsale
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-flashsale}
     ports:
       - "5432:5432"
     volumes:
@@ -128,9 +128,9 @@ services:
     image: postgres:15-alpine
     container_name: flashsale-postgres-replica
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=flashsale_replica
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB_REPLICA:-flashsale_replica}
     ports:
       - "5433:5432"
     volumes:
