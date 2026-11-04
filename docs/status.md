@@ -49,7 +49,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ### Phase 2: Atomic Inventory Offloading — FR-02, NFR-01
 
-- [] Story 2.1 (Domain): Tạo entity Inventory, interface IInventoryRepository, exception InsufficientInventoryException trong FlashSale.Domain
+- [x] Story 2.1 (Domain): Tạo entity Inventory, interface IInventoryRepository, exception InsufficientInventoryException trong FlashSale.Domain
 - [] Story 2.2 (Application): Tạo InventoryService, DeductInventoryCommand, DeductInventoryValidator trong FlashSale.Application
 - [] Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
 - [] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
@@ -117,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 1.9 (Infra): Cấu hình RateLimit phân tán trên Redis Cluster (không lưu local memory trên mỗi instance ApiGateway)
-- **Lần cập nhật gần nhất:** Sửa RateLimitMiddleware (xử lý env var rỗng cho RATE_LIMIT_RPS/WINDOW_SECONDS), sửa Program.cs đọc Lua script từ embedded resource, sửa DependencyInjection.cs đọc Lua script từ embedded resource, tất cả 25 test case toàn dự án pass
+- **Story đang làm:** Story 2.2 (Application): Tạo InventoryService, DeductInventoryCommand, DeductInventoryValidator trong FlashSale.Application
+- **Lần cập nhật gần nhất:** Hoàn thành Story 2.1 (Domain): tạo Inventory.cs, IInventoryRepository.cs, InsufficientInventoryException.cs; viết unit test 11 case pass (InventoryTests 9 case, InsufficientInventoryExceptionTests 2 case); build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
