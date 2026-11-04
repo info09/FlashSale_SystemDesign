@@ -26,7 +26,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ### Phase 0: Nền tảng hạ tầng & CI-CD (NFR-08)
 
-- [] Story 0.1: Tạo solution (.sln) và cấu trúc thư mục theo Clean Architecture (FlashSale.Domain, FlashSale.Application, FlashSale.Infrastructure, FlashSale.Api, FlashSale.Worker, tests/)
+- [x] Story 0.1: Tạo solution (.sln) và cấu trúc thư mục theo Clean Architecture (FlashSale.Domain, FlashSale.Application, FlashSale.Infrastructure, FlashSale.Api, FlashSale.Worker, tests/)
 - [] Story 0.2: Thêm tham chiếu giữa các project tuân theo Dependency Rule (Domain không tham chiếu layer khác, Application chỉ tham chiếu Domain, Infrastructure tham chiếu Domain+Application, Api tham chiếu Application+Infrastructure, Worker tham chiếu Application+Infrastructure)
 - [] Story 0.3: Cấu hình docker-compose.yml chạy toàn bộ dịch vụ: FlashSale.Api, FlashSale.Worker, Redis Cluster, RabbitMQ, PostgreSQLPrimary, ReadReplica, Prometheus, Grafana, k6
 - [] Story 0.4: Thiết lập secret management (.env.example không chứa giá trị thật, biến môi trường cho connection string PostgreSQLPrimary, ReadReplica, Redis, RabbitMQ)
@@ -114,9 +114,9 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ## 3. Trạng thái hiện tại
 
-- **Phase đang làm:** Chưa có (dự án mới khởi tạo, tất cả story `- []`)
-- **Story đang làm:** Chưa có
-- **Lần cập nhật gần nhất:** Tạo file status.md lần đầu
+- **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
+- **Story đang làm:** Story 0.2 - Thêm tham chiếu giữa các project tuân theo Dependency Rule
+- **Lần cập nhật gần nhất:** Hoàn thành Story 0.1 (tạo solution + cấu trúc thư mục + build thành công 0 error)
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
