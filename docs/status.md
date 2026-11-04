@@ -27,7 +27,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ### Phase 0: Nền tảng hạ tầng & CI-CD (NFR-08)
 
 - [x] Story 0.1: Tạo solution (.sln) và cấu trúc thư mục theo Clean Architecture (FlashSale.Domain, FlashSale.Application, FlashSale.Infrastructure, FlashSale.Api, FlashSale.Worker, tests/)
-- [] Story 0.2: Thêm tham chiếu giữa các project tuân theo Dependency Rule (Domain không tham chiếu layer khác, Application chỉ tham chiếu Domain, Infrastructure tham chiếu Domain+Application, Api tham chiếu Application+Infrastructure, Worker tham chiếu Application+Infrastructure)
+- [x] Story 0.2: Thêm tham chiếu giữa các project tuân theo Dependency Rule (Domain không tham chiếu layer khác, Application chỉ tham chiếu Domain, Infrastructure tham chiếu Domain+Application, Api tham chiếu Application+Infrastructure, Worker tham chiếu Application+Infrastructure)
 - [] Story 0.3: Cấu hình docker-compose.yml chạy toàn bộ dịch vụ: FlashSale.Api, FlashSale.Worker, Redis Cluster, RabbitMQ, PostgreSQLPrimary, ReadReplica, Prometheus, Grafana, k6
 - [] Story 0.4: Thiết lập secret management (.env.example không chứa giá trị thật, biến môi trường cho connection string PostgreSQLPrimary, ReadReplica, Redis, RabbitMQ)
 - [] Story 0.5: Tạo pipeline CI-CD cơ bản (build .NET 8, chạy unit test, dừng pipeline nếu test fail)
@@ -115,8 +115,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 0.2 - Thêm tham chiếu giữa các project tuân theo Dependency Rule
-- **Lần cập nhật gần nhất:** Hoàn thành Story 0.1 (tạo solution + cấu trúc thư mục + build thành công 0 error, commit d2e8a92)
+- **Story đang làm:** Story 0.3 - Cấu hình docker-compose.yml chạy toàn bộ dịch vụ
+- **Lần cập nhật gần nhất:** Hoàn thành Story 0.2 (Dependency Rule đã đúng, build pass 0 error)
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
