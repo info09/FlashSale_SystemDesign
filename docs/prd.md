@@ -46,7 +46,7 @@ Mã FR dùng định dạng FR-XX, không thay đổi sau này để docs/archit
 
 [CẦN LÀM RÕ] Tên RabbitMQ Exchange/Queue và routing key cụ thể cho pipeline tạo đơn.
 
-[CẦN LÀM RÕ] Cơ chế xác thực/đăng nhập của client khi gọi API (API key, JWT, hay không có auth trong MVP).
+Cơ chế xác thực/đăng nhập của client khi gọi API: **ASP.NET Core Identity + Bearer Token (JWT)**. Client đăng nhập qua Identity để nhận Bearer Token, sau đó gửi token trong header `Authorization: Bearer <token>` cho mỗi request. API Gateway xác thực token trước khi kiểm tra RateLimit (FR-01, NFR-04).
 
 ## 5. Non-Functional Requirements (NFR)
 
@@ -55,7 +55,7 @@ Mã NFR dùng định dạng NFR-XX, không thay đổi sau này.
 - **NFR-01 (Hiệu năng):** p99 latency của luồng nhận đơn (fast-path, từ request đến trả về 202 Accepted) phải dưới 20ms. Mục tiêu thực tế khoảng 18ms đối với atomic inventory offloading trên Redis.
 - **NFR-02 (Hiệu năng):** Hệ thống phải chịu spike traffic tối đa 15.000 RPS mà không treo và không trả về lỗi 5xx do quá tải hệ thống (ngoại lỗi 429 rate limit).
 - **NFR-03 (Khả năng chịu tải):** Xử lý ổn định 8.000 Concurrent Virtual Users với tỷ lệ lỗi (Error Rate) dưới 1%.
-- **NFR-04 (Bảo mật):** Tất cả API endpoint phải chỉ cho phép gọi qua HTTPS; rate limit phải áp dụng phân tán trên nhiều instance API Gateway (không bị bypass khi scale out). Mức tối thiểu: không cho phép client gửi vô hạn request mà không bị chặn.
+- **NFR-04 (Bảo mật):** Tất cả API endpoint phải chỉ cho phép gọi qua HTTPS; mọi request phải kèm Bearer Token hợp lệ (ASP.NET Core Identity) trong header `Authorization: Bearer <token>` trước khi kiểm tra RateLimit; rate limit phải áp dụng phân tán trên nhiều instance API Gateway (không bị bypass khi scale out). Mức tối thiểu: không cho phép client gửi vô hạn request mà không bị chặn.
 - **NFR-05 (Khả năng mở rộng):** API Gateway, Worker, và Redis Cluster phải có thể scale horizontally; trạng thái rate limit và inventory phải được chia sẻ qua Redis (không lưu local memory trên mỗi instance).
 - **NFR-06 (Độ tin cậy / Uptime):** Không làm thất thoát đơn hàng đã nhận 202 Accepted. Tính nhất quán dữ liệu (Data Consistency) đạt 100% khi ghi DB bất đồng bộ qua Outbox Pattern.
 - **NFR-07 (Khả năng quan sát):** Hệ thống phải xuất metric đủ cho Prometheus scrape và hiển thị trên Grafana Dashboard: request rate, error rate, p99 latency, queue depth, DLQ size, inventory remaining.
@@ -84,7 +84,7 @@ Danh sách các điểm [CẦN LÀM RÕ] đã đánh dấu trong PRD, gom lại 
 
 1. Ngưỡng rate limit cụ thể (request/giây per customer hay per IP) — liên quan FR-01, NFR-04.
 2. Tên RabbitMQ Exchange/Queue và routing key cụ thể — liên quan FR-03.
-3. Cơ chế xác thực/đăng nhập của client khi gọi API (API key, JWT, hoặc không auth) — liên quan FR-01, NFR-04.
+3. Cơ chế xác thực/đăng nhập của client khi gọi API: **ASP.NET Core Identity + Bearer Token (JWT)** — đã chốt, liên quan FR-01, NFR-04.
 4. PostgreSQL Primary → Read Replica replication lag acceptable — liên quan NFR-06.
 5. Thời gian purge/archive bản ghi Outbox table — liên quan NFR-06.
 6. Thời gian giữ message trong DLQ trước khi xóa/can thiệp — liên quan FR-05, NFR-07.

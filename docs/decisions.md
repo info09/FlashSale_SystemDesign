@@ -53,4 +53,16 @@ Quy tắc trạng thái:
 - **Đánh đổi/hệ quả (Trade-off):** Thêm 2 NuGet package vào FlashSale.Api; Scalar phụ thuộc vào Swagger JSON nên vẫn phải giữ Swashbuckle để sinh `/swagger/v1/swagger.json`.
 - **Trạng thái (Status):** Active
 
+### [2026-11-04] — Chọn ASP.NET Core Identity + Bearer Token (JWT) cho xác thực client
+
+- **Bối cảnh (Context):** Cần cơ chế xác thực client khi gọi API (FR-01, NFR-04). Trước đây docs/prd.md đánh dấu đây là điểm `[CẦN LÀM RÕ]` (câu 3). Xác thực là điều kiện tiền đề trước khi kiểm tra RateLimit và xử lý đơn hàng, để tránh client ẩn danh gửi vô hạn request.
+- **Các lựa chọn đã xem xét (Options considered):** 
+  - API Key: đơn giản nhưng khó quản lý vòng đời, xoá key, quay vòng (rotation), không phù hợp cho FlashSaleShopper cá nhân.
+  - Không auth trong MVP: vi phạm NFR-04 (không cho phép client gửi vô hạn request mà không bị chặn), không phân biệt được client để áp dụng RateLimit phân tán.
+  - ASP.NET Core Identity + Bearer Token (JWT): quản lý user, password hash, đăng nhập, phát hành token; client gửi `Authorization: Bearer <token>` mỗi request.
+- **Quyết định (Decision):** Chọn ASP.NET Core Identity + Bearer Token (JWT). Client đăng nhập qua Identity để nhận Bearer Token, gửi trong header `Authorization: Bearer <token>` cho mỗi request. API Gateway xác thực token trước khi kiểm tra RateLimit.
+- **Lý do (Rationale):** Đáp ứng NFR-04 (bảo mật, HTTPS bắt buộc + xác thực), cho phép phân biệt client để áp dụng RateLimit phân tán qua Redis (không bị bypass khi scale out). Identity cung cấp sẵn user store, password hashing, login flow.
+- **Đánh đổi/hệ quả (Trade-off):** Thêm phụ thuộc `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Microsoft.AspNetCore.Authentication.JwtBearer`; cần bảng Users trong PostgreSQLPrimary và migration mới; tăng độ phức tạp cho luồng đăng nhập trước khi mua hàng.
+- **Trạng thái (Status):** Active
+
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.

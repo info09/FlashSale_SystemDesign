@@ -14,6 +14,7 @@ Dự án chia thành 7 phase theo thứ tự triển khai (ưu tiên nền tản
 | Phase 0 | Nền tảng hạ tầng & CI-CD | Khởi tạo Docker Compose, cấu trúc thư mục, secret management, pipeline CI-CD cơ bản | NFR-08 |
 | Phase 1 | Traffic Protection (Rate Limit) | Xây dựng ApiGateway kiểm tra RateLimit qua Redis Lua Script (Token Bucket), trả HTTP 429 nếu vượt ngưỡng | FR-01, NFR-04 |
 | Phase 2 | Atomic Inventory Offloading | Xây dựng Inventory Module trừ kho atomic trên Redis qua Lua Script, chặn OverSelling | FR-02, NFR-01 |
+| Phase 2.5 | Xác thực & Đăng nhập (Identity + Bearer Token) | Tích hợp ASP.NET Core Identity + Bearer Token (JWT) để xác thực client trước khi kiểm tra RateLimit | FR-01, NFR-04 |
 | Phase 3 | Event-Driven Order Pipeline | Đẩy Message vào RabbitMQ Queue (OrderPipeline), trả Http202Accepted ngay cho FlashSaleShopper | FR-03 |
 | Phase 4 | Async Worker & Transactional Outbox | AsyncWorker ghi Order + Outbox vào PostgreSQLPrimary trong 1 transaction, Retry ExponentialBackoff, DLQ sau 3 lần | FR-04, FR-05, NFR-06 |
 | Phase 5 | Observability & Monitoring | Endpoint HealthCheck, xuất Metric (P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining) cho Prometheus/Grafana | FR-06, NFR-07 |
@@ -57,6 +58,18 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers) — 4 test case pass
 - [x] Story 2.7 (Test): Viết e2e test kiểm tra luồng HTTP: đủ kho → trừ thành công (200), hết hàng → trả lỗi 400, không tạo Order — 2 test case pass (WebApplicationFactory + Testcontainers Redis)
 - [x] Story 2.8 (Perf): Đo p99 latency của AtomicInventoryOffloading mục tiêu ~18ms (NFR-01) — P99 = 1ms (1000 iterations, Redis qua Testcontainers), đáp ứng < 20ms
+
+### Phase 2.5: Xác thực & Đăng nhập (Identity + Bearer Token) — FR-01, NFR-04
+
+- [] Story 2.5.1 (Domain): Tạo entity User, Role, interface IUserRepository, IUserService trong FlashSale.Domain
+- [] Story 2.5.2 (Infrastructure): Cấu hình ASP.NET Core Identity với PostgreSQLPrimary (DbContext, migration bảng Users/Roles), đăng ký Identity services
+- [] Story 2.5.3 (Infrastructure): Triển khai JwtBearer authentication (AuthenticationBuilder, JwtBearerOptions, TokenValidationParameters), ký JWT token khi đăng nhập thành công
+- [] Story 2.5.4 (Application): Tạo AuthService, LoginCommand, RegisterCommand, LoginResult, validators trong FlashSale.Application
+- [] Story 2.5.5 (Api): Tạo AuthController, endpoint /api/v1/auth/login, /api/v1/auth/register, bảo vệ endpoint InventoryController bằng [Authorize]
+- [] Story 2.5.6 (Api): Cập nhật RateLimitMiddleware để lấy ClientId từ authenticated user (Claim) thay vì header X-Client-Id/IP
+- [] Story 2.5.7 (Test): Viết unit test cho AuthService (mock IUserRepository, mock JwtBearer)
+- [] Story 2.5.8 (Test): Viết integration test kiểm tra đăng nhập nhận JWT, gọi endpoint cần auth thành công/thất bại (401)
+- [] Story 2.5.9 (Test): Viết e2e test kiểm tra luồng HTTP: không token → 401, có token hợp lệ → xử lý tiếp
 
 ### Phase 3: Event-Driven Order Pipeline — FR-03
 
@@ -118,7 +131,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
 - **Story đang làm:** Tích hợp Scalar API documentation (FR-06, NFR-07 hỗ trợ quan sát API)
-- **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; hoàn thành Story 2.5 (Test): unit test InventoryService 5 test case pass (mock IInventoryRepository); hoàn thành Story 2.6 (Test): integration test RedisInventoryIntegrationTest 4 test case pass (Testcontainers Redis thật, kiểm tra atomic không over-selling); hoàn thành Story 2.7 (Test): e2e test InventoryEndToEndTest 2 test case pass (WebApplicationFactory + Testcontainers Redis); hoàn thành Story 2.8 (Perf): đo p99 latency AtomicInventoryOffloading = 1ms (1000 iterations), đáp ứng NFR-01 < 20ms; build 0 error
+- **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; hoàn thành Story 2.5 (Test): unit test InventoryService 5 test case pass (mock IInventoryRepository); hoàn thành Story 2.6 (Test): integration test RedisInventoryIntegrationTest 4 test case pass (Testcontainers Redis thật, kiểm tra atomic không over-selling); hoàn thành Story 2.7 (Test): e2e test InventoryEndToEndTest 2 test case pass (WebApplicationFactory + Testcontainers Redis); hoàn thành Story 2.8 (Perf): đo p99 latency AtomicInventoryOffloading = 1ms (1000 iterations), đáp ứng NFR-01 < 20ms; chốt cơ chế xác thực ASP.NET Core Identity + Bearer Token (JWT) (docs/prd.md + docs/decisions.md); build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
@@ -126,7 +139,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 |--------------|---------------------|------------|--------------|
 | Xây dựng UI/Frontend thực tế | Phase 7 (tất cả story) | Ngoài phạm vi MVP (theo docs/prd.md và docs/architecture.md), chỉ tập trung Backend API Core & Pipeline | Chưa xác định, cần review lại trước khi release |
 | Chi tiết deploy produzione (cloud provider, load balancer, tên miền, số instance) | Phase 0 (Story 0.3) | docs/deploy.md chưa được tạo (chờ xác nhận hosting/infra từ người dùng) | Chưa xác định, cần tạo docs/deploy.md trước |
-| Cơ chế xác thực client (API key/JWT/không auth) | Phase 1 (Story 1.4, 1.5) | [CẦN LÀM RÕ] trong docs/prd.md Câu 3 | Chưa xác định |
+| Cơ chế xác thực client (ASP.NET Core Identity + Bearer Token JWT) | Phase 1 (Story 1.4, 1.5) | Đã chốt: ASP.NET Core Identity + Bearer Token (docs/prd.md + docs/decisions.md) | Phase 2.5 |
 | Tên RabbitMQ Exchange/Queue/Routing Key cụ thể | Phase 3 (Story 3.3) | [CẦN LÀM RÕ] trong docs/prd.md Câu 2 | Chưa xác định |
 | Thời gian purge/archive bảng Outbox | Phase 4 (Story 4.13) | [CẦN LÀM RÕ] trong docs/prd.md Câu 5 | Chưa xác định |
 | Thời gian giữ message trong DeadLetterQueue | Phase 4 (Story 4.8) | [CẦN LÀM RÕ] trong docs/prd.md Câu 6 | Chưa xác định |
