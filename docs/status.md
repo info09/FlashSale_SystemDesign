@@ -51,7 +51,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - [x] Story 2.1 (Domain): Tạo entity Inventory, interface IInventoryRepository, exception InsufficientInventoryException trong FlashSale.Domain
 - [x] Story 2.2 (Application): Tạo InventoryService, DeductInventoryCommand, DeductInventoryValidator trong FlashSale.Application
-- [] Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
+- [x] Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
 - [] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
 - [] Story 2.5 (Test): Viết unit test cho InventoryService (mock Redis Lua Script)
 - [] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers)
@@ -117,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
-- **Lần cập nhật gần nhất:** Hoàn thành Story 2.2 (Application): tạo DeductInventoryCommand, DeductInventoryCommandHandler, DeductInventoryCommandValidator, IInventoryService, InventoryService; viết unit test 5 case pass; build 0 error
+- **Story đang làm:** Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
+- **Lần cập nhật gần nhất:** Hoàn thành Story 2.3 (Infrastructure): tạo atomic_inventory_deduct.lua, RedisInventoryService, viết unit test 4 case pass; build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

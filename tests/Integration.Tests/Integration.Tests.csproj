@@ -24,6 +24,7 @@
     <PackageReference Include="Testcontainers" Version="3.6.0" />
     <PackageReference Include="Testcontainers.Redis" Version="3.6.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

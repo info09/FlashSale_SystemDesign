@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Testcontainers.Redis;
 using Xunit;
 
@@ -31,12 +33,20 @@ public class RateLimitEndToEndTest : IAsyncLifetime
     [Fact]
     public async Task GivenUnderRateLimit_WhenCallApi_ShouldReturn200()
     {
-        // Arrange - Set environment variables for Redis connection
-        Environment.SetEnvironmentVariable("REDIS_CONNECTION_STRING", _redisContainer.GetConnectionString());
-        Environment.SetEnvironmentVariable("RATE_LIMIT_RPS", "100");
-        Environment.SetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS", "60");
+        // Arrange - Tạo factory mới với connection string thực tế từ Testcontainers
+        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddInMemoryCollection(new[]
+                {
+                    new KeyValuePair<string, string>("REDIS_CONNECTION_STRING", _redisContainer.GetConnectionString()),
+                    new KeyValuePair<string, string>("RATE_LIMIT_RPS", "100"),
+                    new KeyValuePair<string, string>("RATE_LIMIT_WINDOW_SECONDS", "60")
+                });
+            });
+        });
 
-        var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
@@ -55,12 +65,20 @@ public class RateLimitEndToEndTest : IAsyncLifetime
     [Fact]
     public async Task GivenOverRateLimit_WhenCallApi_ShouldReturn429()
     {
-        // Arrange - Set environment variables for Redis connection with low rate limit
-        Environment.SetEnvironmentVariable("REDIS_CONNECTION_STRING", _redisContainer.GetConnectionString());
-        Environment.SetEnvironmentVariable("RATE_LIMIT_RPS", "3");
-        Environment.SetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS", "60");
+        // Arrange - Tạo factory mới với rate limit thấp (3 requests / 60s)
+        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddInMemoryCollection(new[]
+                {
+                    new KeyValuePair<string, string>("REDIS_CONNECTION_STRING", _redisContainer.GetConnectionString()),
+                    new KeyValuePair<string, string>("RATE_LIMIT_RPS", "3"),
+                    new KeyValuePair<string, string>("RATE_LIMIT_WINDOW_SECONDS", "60")
+                });
+            });
+        });
 
-        var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false

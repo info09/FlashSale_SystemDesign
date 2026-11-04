@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="ExternalServices/Redis/Scripts/rate_limit_token_bucket.lua" />
+    <EmbeddedResource Include="ExternalServices/Redis/Scripts/atomic_inventory_deduct.lua" />
   </ItemGroup>
 
 </Project>
