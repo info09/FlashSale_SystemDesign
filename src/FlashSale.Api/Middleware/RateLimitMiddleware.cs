@@ -1,5 +1,6 @@
 using FlashSale.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlashSale.Api.Middleware;
@@ -13,22 +14,25 @@ public class RateLimitMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _configuration;
     private readonly int _maxRequests;
     private readonly int _windowSeconds;
 
     public RateLimitMiddleware(
         RequestDelegate next,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IConfiguration configuration)
     {
         _next = next;
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
 
-        // Doc ngưỡng rate limit tu bien moi truong (co the override qua bien moi truong)
-        var rateLimitRpsEnv = System.Environment.GetEnvironmentVariable("RATE_LIMIT_RPS");
-        _maxRequests = string.IsNullOrWhiteSpace(rateLimitRpsEnv) ? 100 : int.Parse(rateLimitRpsEnv);
+        // Doc ngưỡng rate limit tu cau hinh (co the override qua bien moi truong hoac AddInMemoryCollection trong test)
+        var rateLimitRps = _configuration["RATE_LIMIT_RPS"];
+        _maxRequests = string.IsNullOrWhiteSpace(rateLimitRps) ? 100 : int.Parse(rateLimitRps);
 
-        var windowSecondsEnv = System.Environment.GetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS");
-        _windowSeconds = string.IsNullOrWhiteSpace(windowSecondsEnv) ? 60 : int.Parse(windowSecondsEnv);
+        var windowSeconds = _configuration["RATE_LIMIT_WINDOW_SECONDS"];
+        _windowSeconds = string.IsNullOrWhiteSpace(windowSeconds) ? 60 : int.Parse(windowSeconds);
     }
 
     /// <summary>

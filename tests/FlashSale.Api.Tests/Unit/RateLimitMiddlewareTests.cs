@@ -6,6 +6,7 @@ using FlashSale.Api.Middleware;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
@@ -24,8 +25,13 @@ public class RateLimitMiddlewareTests
         _scopeFactoryMock = new Mock<IServiceScopeFactory>();
 
         // Mac dau: 100 requests / 60 giay
-        Environment.SetEnvironmentVariable("RATE_LIMIT_RPS", "100");
-        Environment.SetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS", "60");
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new[]
+            {
+                new KeyValuePair<string, string>("RATE_LIMIT_RPS", "100"),
+                new KeyValuePair<string, string>("RATE_LIMIT_WINDOW_SECONDS", "60"),
+            })
+            .Build();
 
         _middleware = new RateLimitMiddleware(
             next: async (context) =>
@@ -33,7 +39,8 @@ public class RateLimitMiddlewareTests
                 context.Response.StatusCode = StatusCodes.Status200OK;
                 await context.Response.WriteAsync("OK");
             },
-            scopeFactory: _scopeFactoryMock.Object);
+            scopeFactory: _scopeFactoryMock.Object,
+            configuration: config);
     }
 
     [Fact]
