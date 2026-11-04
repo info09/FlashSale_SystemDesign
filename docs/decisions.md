@@ -42,4 +42,15 @@ Quy tắc trạng thái:
 
 ## Danh sách quyết định
 
+### [2026-11-04] — Chọn Scalar làm API documentation
+
+- **Bối cảnh (Context):** Cần có trang tài liệu API tương tác để DevOps và FlashSaleShopper xem các endpoint (inventory deduct, health, v.v.) và thử gọi trực tiếp. Hiện tại chỉ có endpoint "/" và "/health", không có dokumentation API.
+- **Các lựa chọn đã xem xét (Options considered):** 
+  - Swagger UI (Swashbuckle.AspNetCore alone): phổ biến nhưng giao diện cũ, bundle size lớn.
+  - Scalar (Scalar.AspNetCore): hiện đại, nhẹ, hỗ trợ OpenAPI 3, giao diện sạch, dễ tùy biến.
+- **Quyết định (Decision):** Chọn Scalar.AspNetCore kèm Swashbuckle.AspNetCore (để sinh OpenAPI JSON), truy cập tại `/scalar/v1`.
+- **Lý do (Rationale):** Giao diện hiện đại hơn Swagger UI, đóng gói nhẹ, phù hợp NFR-07 (khả năng quan sát) và hỗ trợ tra cứu endpoint nhanh cho DevOps.
+- **Đánh đổi/hệ quả (Trade-off):** Thêm 2 NuGet package vào FlashSale.Api; Scalar phụ thuộc vào Swagger JSON nên vẫn phải giữ Swashbuckle để sinh `/swagger/v1/swagger.json`.
+- **Trạng thái (Status):** Active
+
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.

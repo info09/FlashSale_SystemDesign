@@ -117,7 +117,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Chưa có (tất cả story Phase 2 đã hoàn thành)
+- **Story đang làm:** Tích hợp Scalar API documentation (FR-06, NFR-07 hỗ trợ quan sát API)
 - **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; viết unit test 5 case pass; build 0 error, tất cả 29 test case toàn dự án pass
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
