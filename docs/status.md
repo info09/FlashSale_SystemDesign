@@ -39,7 +39,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - [x] Story 1.1 (Domain): Tạo entity RateLimit, interface IRateLimitRepository, exception RateLimitExceededException trong FlashSale.Domain
 - [x] Story 1.2 (Application): Tạo RateLimitService, RateLimitCommand, RateLimitValidator trong FlashSale.Application
-- [] Story 1.3 (Infrastructure): Viết Lua Script TokenBucket (rate_limit_token_bucket.lua), nguyên tử, không chia thành nhiều lệnh; triển khai RedisRateLimitService trong FlashSale.Infrastructure/ExternalServices/Redis/
+- [x] Story 1.3 (Infrastructure): Viết Lua Script TokenBucket (rate_limit_token_bucket.lua), nguyên tử, không chia thành nhiều lệnh; triển khai RedisRateLimitService trong FlashSale.Infrastructure/ExternalServices/Redis/
 - [] Story 1.4 (Api): Tạo RateLimitMiddleware kiểm tra RateLimit trước khi xử lý tiếp, trả HTTP 429 nếu vượt ngưỡng; đăng ký middleware trong Program.cs
 - [] Story 1.5 (Security): Đảm bảo tất cả API endpoint chỉ cho phép gọi qua HTTPS (NFR-04)
 - [] Story 1.6 (Test): Viết unit test cho RateLimitService (mock Redis Lua Script)
@@ -117,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 1.3 (Infrastructure): Viết Lua Script TokenBucket (rate_limit_token_bucket.lua), nguyên tử, không chia thành nhiều lệnh; triển khai RedisRateLimitService trong FlashSale.Infrastructure/ExternalServices/Redis/
-- **Lần cập nhật gần nhất:** Hoàn thành Story 1.2 (Application): tạo RateLimitCommand, RateLimitCommandHandler, RateLimitCommandValidator, IRateLimitService, RateLimitService; viết unit test 5 case đều pass; build 0 error
+- **Story đang làm:** Story 1.4 (Api): Tạo RateLimitMiddleware kiểm tra RateLimit trước khi xử lý tiếp, trả HTTP 429 nếu vượt ngưỡng; đăng ký middleware trong Program.cs
+- **Lần cập nhật gần nhất:** Hoàn thành Story 1.3 (Infrastructure): tạo rate_limit_token_bucket.lua, IRedisScriptExecutor, RedisScriptExecutor, RedisRateLimitService; viết unit test 2 case pass; build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

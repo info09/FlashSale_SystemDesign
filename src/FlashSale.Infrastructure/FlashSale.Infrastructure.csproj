@@ -12,4 +12,8 @@
     <ProjectReference Include="..\FlashSale.Application\FlashSale.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
+  </ItemGroup>
+
 </Project>
