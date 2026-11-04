@@ -42,8 +42,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 1.3 (Infrastructure): Viết Lua Script TokenBucket (rate_limit_token_bucket.lua), nguyên tử, không chia thành nhiều lệnh; triển khai RedisRateLimitService trong FlashSale.Infrastructure/ExternalServices/Redis/
 - [x] Story 1.4 (Api): Tạo RateLimitMiddleware kiểm tra RateLimit trước khi xử lý tiếp, trả HTTP 429 nếu vượt ngưỡng; đăng ký middleware trong Program.cs
 - [x] Story 1.5 (Security): Đảm bảo tất cả API endpoint chỉ cho phép gọi qua HTTPS (NFR-04)
-- [] Story 1.6 (Test): Viết unit test cho RateLimitService (mock Redis Lua Script)
-- [] Story 1.7 (Test): Viết integration test kiểm tra RateLimit qua Redis thật (Testcontainers)
+- [x] Story 1.6 (Test): Viết unit test cho RateLimitService (mock Redis Lua Script) — đã hoàn thành trong Story 1.2 (5 test case pass)
+- [x] Story 1.7 (Test): Viết integration test kiểm tra RateLimit qua Redis thật (Testcontainers)
 - [] Story 1.8 (Test): Viết e2e test kiểm tra luồng HTTP: vượt ngưỡng → nhận 429, dưới ngưỡng → tiếp tục xử lý
 - [] Story 1.9 (Infra): Cấu hình RateLimit phân tán trên Redis Cluster (không lưu local memory trên mỗi instance ApiGateway)
 
@@ -117,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 1.6 (Test): Viết unit test cho RateLimitService (mock Redis Lua Script)
-- **Lần cập nhật gần nhất:** Hoàn thành Story 1.5 (Security): thêm UseHttpsRedirection vào Program.cs (NFR-04), viết unit test kiểm tra HttpsRedirection có thể đăng ký, build pass 0 warning 0 error
+- **Story đang làm:** Story 1.8 (Test): Viết e2e test kiểm tra luồng HTTP: vượt ngưỡng → nhận 429, dưới ngưỡng → tiếp tục xử lý
+- **Lần cập nhật gần nhất:** Hoàn thành Story 1.7 (Infrastructure Integration Test): viết RedisRateLimitIntegrationTest với Testcontainers Redis container thực tế, 3 test case pass (allowed, exhausted, different clients), build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
