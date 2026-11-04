@@ -1,11 +1,13 @@
+using System.IO;
+using System.Text.Json;
+using System.Threading;
+using FluentAssertions;
 using FlashSale.Api.Middleware;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Interfaces;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using System.Text.Json;
 using Xunit;
 
 namespace FlashSale.Api.Tests.Unit;
@@ -13,19 +15,17 @@ namespace FlashSale.Api.Tests.Unit;
 public class RateLimitMiddlewareTests
 {
     private readonly Mock<IRateLimitService> _rateLimitServiceMock;
-    private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly RateLimitMiddleware _middleware;
 
     public RateLimitMiddlewareTests()
     {
         _rateLimitServiceMock = new Mock<IRateLimitService>();
-        _configurationMock = new Mock<IConfiguration>();
+        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
 
         // Mac dau: 100 requests / 60 giay
-        _configurationMock
-            .Setup(x => x["RATE_LIMIT_RPS"]).Returns("100");
-        _configurationMock
-            .Setup(x => x["RATE_LIMIT_WINDOW_SECONDS"]).Returns("60");
+        Environment.SetEnvironmentVariable("RATE_LIMIT_RPS", "100");
+        Environment.SetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS", "60");
 
         _middleware = new RateLimitMiddleware(
             next: async (context) =>
@@ -33,8 +33,7 @@ public class RateLimitMiddlewareTests
                 context.Response.StatusCode = StatusCodes.Status200OK;
                 await context.Response.WriteAsync("OK");
             },
-            rateLimitService: _rateLimitServiceMock.Object,
-            configuration: _configurationMock.Object);
+            scopeFactory: _scopeFactoryMock.Object);
     }
 
     [Fact]
@@ -56,6 +55,18 @@ public class RateLimitMiddlewareTests
         context.Connection.RemoteIpAddress = null;
         context.Request.Headers["X-Client-Id"] = "client-1";
         context.Request.Headers["Correlation-Id"] = "corr-1";
+
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        serviceProviderMock
+            .Setup(x => x.GetService(typeof(IRateLimitService)))
+            .Returns(_rateLimitServiceMock.Object);
+
+        var scopeMock = new Mock<IServiceScope>();
+        scopeMock.Setup(x => x.ServiceProvider).Returns(serviceProviderMock.Object);
+
+        _scopeFactoryMock
+            .Setup(x => x.CreateScope())
+            .Returns(scopeMock.Object);
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync("client-1", 100, 60, It.IsAny<CancellationToken>()))
@@ -91,6 +102,18 @@ public class RateLimitMiddlewareTests
         context.Request.Headers["X-Client-Id"] = "client-1";
         context.Request.Headers["Correlation-Id"] = "corr-1";
 
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        serviceProviderMock
+            .Setup(x => x.GetService(typeof(IRateLimitService)))
+            .Returns(_rateLimitServiceMock.Object);
+
+        var scopeMock = new Mock<IServiceScope>();
+        scopeMock.Setup(x => x.ServiceProvider).Returns(serviceProviderMock.Object);
+
+        _scopeFactoryMock
+            .Setup(x => x.CreateScope())
+            .Returns(scopeMock.Object);
+
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync("client-1", 100, 60, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RateLimitResult(false, 0, 30));
@@ -125,6 +148,18 @@ public class RateLimitMiddlewareTests
             }
         };
         context.Connection.RemoteIpAddress = null;
+
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        serviceProviderMock
+            .Setup(x => x.GetService(typeof(IRateLimitService)))
+            .Returns(_rateLimitServiceMock.Object);
+
+        var scopeMock = new Mock<IServiceScope>();
+        scopeMock.Setup(x => x.ServiceProvider).Returns(serviceProviderMock.Object);
+
+        _scopeFactoryMock
+            .Setup(x => x.CreateScope())
+            .Returns(scopeMock.Object);
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync("unknown", 100, 60, It.IsAny<CancellationToken>()))

@@ -1,4 +1,6 @@
 using FlashSale.Application.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlashSale.Api.Middleware;
 
@@ -10,21 +12,20 @@ namespace FlashSale.Api.Middleware;
 public class RateLimitMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IRateLimitService _rateLimitService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly int _maxRequests;
     private readonly int _windowSeconds;
 
     public RateLimitMiddleware(
         RequestDelegate next,
-        IRateLimitService rateLimitService,
-        IConfiguration configuration)
+        IServiceScopeFactory scopeFactory)
     {
         _next = next;
-        _rateLimitService = rateLimitService;
+        _scopeFactory = scopeFactory;
 
-        // Doc ngưỡng rate limit tu cau hinh (co the override qua bien moi truong)
-        _maxRequests = int.Parse(configuration["RATE_LIMIT_RPS"] ?? "100");
-        _windowSeconds = int.Parse(configuration["RATE_LIMIT_WINDOW_SECONDS"] ?? "60");
+        // Doc ngưỡng rate limit tu bien moi truong (co the override qua bien moi truong)
+        _maxRequests = int.Parse(System.Environment.GetEnvironmentVariable("RATE_LIMIT_RPS") ?? "100");
+        _windowSeconds = int.Parse(System.Environment.GetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS") ?? "60");
     }
 
     /// <summary>
@@ -40,8 +41,12 @@ public class RateLimitMiddleware
             clientId = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         }
 
+        // Tao scope de lay IRateLimitService (scoped service)
+        using var scope = _scopeFactory.CreateScope();
+        var rateLimitService = scope.ServiceProvider.GetRequiredService<IRateLimitService>();
+
         // Kiem tra RateLimit qua Application Service
-        var result = await _rateLimitService.CheckRateLimitAsync(
+        var result = await rateLimitService.CheckRateLimitAsync(
             clientId,
             _maxRequests,
             _windowSeconds,

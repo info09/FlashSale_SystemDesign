@@ -39,7 +39,7 @@ public class RateLimitServiceTests
     }
 
     [Fact]
-    public async Task CheckRateLimitAsync_WhenRejected_ShouldThrowRateLimitExceededException()
+    public async Task CheckRateLimitAsync_WhenRejected_ShouldReturnRateLimitResultFalse()
     {
         // Arrange
         var clientId = "client-1";
@@ -50,11 +50,12 @@ public class RateLimitServiceTests
             .ReturnsAsync(RateLimit.Rejected(clientId, 0, windowSeconds));
 
         // Act
-        var act = () => _rateLimitService.CheckRateLimitAsync(clientId, maxRequests, windowSeconds);
+        var result = await _rateLimitService.CheckRateLimitAsync(clientId, maxRequests, windowSeconds);
 
         // Assert
-        (await act.Should().ThrowAsync<RateLimitExceededException>())
-            .WithMessage("*Rate limit exceeded*");
+        result.IsAllowed.Should().BeFalse();
+        result.RemainingRequests.Should().Be(0);
+        result.ResetAfterSeconds.Should().Be(windowSeconds);
     }
 
     [Fact]

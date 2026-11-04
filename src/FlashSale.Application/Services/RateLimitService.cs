@@ -1,13 +1,13 @@
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Interfaces;
-using FlashSale.Domain.Exceptions;
+using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
 
 namespace FlashSale.Application.Services;
 
 /// <summary>
 /// Dịch vụ RateLimit ở lớp Application, orchestrates việc kiểm tra RateLimit qua Domain Repository.
-/// Thuật ngữ chuẩn theo docs/domain-glossary.md: RateLimit, RateLimitExceededException.
+/// Thuật ngữ chuẩn theo docs/domain-glossary.md: RateLimit.
 /// </summary>
 public class RateLimitService : IRateLimitService
 {
@@ -19,8 +19,8 @@ public class RateLimitService : IRateLimitService
     }
 
     /// <summary>
-    /// Kiểm tra RateLimit cho client. Nếu vượt ngưỡng, ném RateLimitExceededException
-    /// để ApiMiddleware trả HTTP 429 cho client (FR-01, NFR-04).
+    /// Kiểm tra RateLimit cho client và trả về kết quả cho phép/từ chối.
+    /// Nếu vượt ngưỡng, trả về RateLimitResult.IsAllowed = false để middleware trả HTTP 429 (FR-01, NFR-04).
     /// </summary>
     public async Task<RateLimitResult> CheckRateLimitAsync(string clientId, int maxRequests, int windowSeconds, CancellationToken cancellationToken = default)
     {
@@ -44,14 +44,16 @@ public class RateLimitService : IRateLimitService
 
         if (!rateLimit.IsAllowed)
         {
-            // Ném exception để ApiMiddleware bắt và trả HTTP 429
-            throw new RateLimitExceededException(rateLimit.ClientId, rateLimit.ResetAfterSeconds);
+            // Trả về kết quả bị chặn, middleware sẽ xử lý trả HTTP 429
+            return new RateLimitResult(
+                IsAllowed: false,
+                RemainingRequests: rateLimit.RemainingRequests,
+                ResetAfterSeconds: rateLimit.ResetAfterSeconds);
         }
 
         return new RateLimitResult(
             IsAllowed: true,
             RemainingRequests: rateLimit.RemainingRequests,
-            ResetAfterSeconds: rateLimit.ResetAfterSeconds
-        );
+            ResetAfterSeconds: rateLimit.ResetAfterSeconds);
     }
 }
