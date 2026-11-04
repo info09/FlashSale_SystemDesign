@@ -1,5 +1,4 @@
-﻿using FlashSale.Application.Features.Inventory.CommandHandlers;
-using FlashSale.Application.Features.Inventory.Commands;
+﻿using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Features.Inventory.Validators;
 using FlashSale.Application.Features.RateLimit.CommandHandlers;
 using FlashSale.Application.Features.RateLimit.Commands;
@@ -7,7 +6,6 @@ using FlashSale.Application.Features.RateLimit.Validators;
 using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
 using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlashSale.Application;

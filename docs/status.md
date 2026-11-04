@@ -52,7 +52,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 2.1 (Domain): Tạo entity Inventory, interface IInventoryRepository, exception InsufficientInventoryException trong FlashSale.Domain
 - [x] Story 2.2 (Application): Tạo InventoryService, DeductInventoryCommand, DeductInventoryValidator trong FlashSale.Application
 - [x] Story 2.3 (Infrastructure): Viết Lua Script atomic (atomic_inventory_deduct.lua), trừ kho nguyên tử; triển khai RedisInventoryService trong FlashSale.Infrastructure/ExternalServices/Redis/
-- [] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
+- [x] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
 - [] Story 2.5 (Test): Viết unit test cho InventoryService (mock Redis Lua Script)
 - [] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers)
 - [] Story 2.7 (Test): Viết e2e test kiểm tra luồng HTTP: đủ kho → trừ thành công, hết hàng → trả lỗi 400, không tạo Order
@@ -117,8 +117,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
-- **Story đang làm:** Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
-- **Lần cập nhật gần nhất:** Hoàn thành Story 2.3 (Infrastructure): tạo atomic_inventory_deduct.lua, RedisInventoryService, viết unit test 4 case pass; build 0 error
+- **Story đang làm:** Chưa có (tất cả story Phase 2 đã hoàn thành)
+- **Lần cập nhật gần nhất:** Tích hợp Scalar API documentation (Swashbuckle.AspNetCore + Scalar.AspNetCore) vào FlashSale.Api, truy cập tại /scalar/v1; thêm app.MapControllers() để đăng ký InventoryController; hoàn thành Story 2.4 (Api): InventoryController, endpoint DeductInventory trả HTTP 200 khi đủ kho, HTTP 400 khi hết kho; viết unit test 5 case pass; build 0 error, tất cả 29 test case toàn dự án pass
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
