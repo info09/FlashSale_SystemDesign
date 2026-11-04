@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "flashsale-api"
+    static_configs:
+      - targets: ["flashsale-api:8080"]
+
+  - job_name: "flashsale-worker"
+    static_configs:
+      - targets: ["flashsale-worker:8080"]

@@ -1,0 +1,199 @@
+version: "3.8"
+
+services:
+  ###############################################################################
+  # ApiGateway (.NET 8) - FR-01, FR-02, FR-03, NFR-01, NFR-04, NFR-05
+  ###############################################################################
+  flashsale-api:
+    build:
+      context: .
+      dockerfile: src/FlashSale.Api/Dockerfile
+    container_name: flashsale-api
+    depends_on:
+      flashsale-redis:
+        condition: service_healthy
+      flashsale-rabbitmq:
+        condition: service_healthy
+      flashsale-postgres-primary:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - POSTGRESQL_PRIMARY_CONNECTION_STRING=Host=flashsale-postgres-primary;Port=5432;Database=flashsale;Username=postgres;Password=postgres
+      - POSTGRESQL_REPLICA_CONNECTION_STRING=Host=flashsale-postgres-replica;Port=5432;Database=flashsale_replica;Username=postgres;Password=postgres
+      - REDIS_CONNECTION_STRING=flashsale-redis:6379
+      - RABBITMQ_CONNECTION_STRING=amqp://guest:guest@flashsale-rabbitmq:5672/
+      - RABBITMQ_QUEUE_NAME=order_pipeline_queue
+      - RABBITMQ_EXCHANGE_NAME=flash_sale_exchange
+      - RABBITMQ_ROUTING_KEY=order.created
+      - RATE_LIMIT_RPS=100
+      - CORRELATION_ID_HEADER=Correlation-Id
+    ports:
+      - "8080:8080"
+    networks:
+      - flashsale-network
+    restart: unless-stopped
+
+  ###############################################################################
+  # AsyncWorker (.NET Background Service) - FR-04, FR-05, NFR-06
+  ###############################################################################
+  flashsale-worker:
+    build:
+      context: .
+      dockerfile: src/FlashSale.Worker/Dockerfile
+    container_name: flashsale-worker
+    depends_on:
+      flashsale-rabbitmq:
+        condition: service_healthy
+      flashsale-postgres-primary:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - POSTGRESQL_PRIMARY_CONNECTION_STRING=Host=flashsale-postgres-primary;Port=5432;Database=flashsale;Username=postgres;Password=postgres
+      - RABBITMQ_CONNECTION_STRING=amqp://guest:guest@flashsale-rabbitmq:5672/
+      - RABBITMQ_QUEUE_NAME=order_pipeline_queue
+      - RABBITMQ_EXCHANGE_NAME=flash_sale_exchange
+      - RABBITMQ_ROUTING_KEY=order.created
+      - CORRELATION_ID_HEADER=Correlation-Id
+    networks:
+      - flashsale-network
+    restart: unless-stopped
+
+  ###############################################################################
+  # Redis Cluster - RateLimit state + Inventory (atomic qua LuaScript)
+  ###############################################################################
+  flashsale-redis:
+    image: redis:7-alpine
+    container_name: flashsale-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ###############################################################################
+  # RabbitMQ - Queue (OrderPipeline) + DeadLetterQueue
+  ###############################################################################
+  flashsale-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: flashsale-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ###############################################################################
+  # PostgreSQLPrimary - ghi Order + Outbox (Transactional Outbox Pattern)
+  ###############################################################################
+  flashsale-postgres-primary:
+    image: postgres:15-alpine
+    container_name: flashsale-postgres-primary
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=flashsale
+    ports:
+      - "5432:5432"
+    volumes:
+      - flashsale-postgres-primary-data:/var/lib/postgresql/data
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flashsale"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ###############################################################################
+  # ReadReplica - chỉ đọc, replication từ Primary (staging/production bật, local tắt)
+  ###############################################################################
+  flashsale-postgres-replica:
+    image: postgres:15-alpine
+    container_name: flashsale-postgres-replica
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=flashsale_replica
+    ports:
+      - "5433:5432"
+    volumes:
+      - flashsale-postgres-replica-data:/var/lib/postgresql/data
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flashsale_replica"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ###############################################################################
+  # Prometheus - thu thập Metric (P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining)
+  ###############################################################################
+  flashsale-prometheus:
+    image: prom/prometheus:latest
+    container_name: flashsale-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - flashsale-network
+    restart: unless-stopped
+
+  ###############################################################################
+  # Grafana - hiển thị DashboardMetric cho DevOps
+  ###############################################################################
+  flashsale-grafana:
+    image: grafana/grafana:latest
+    container_name: flashsale-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - flashsale-grafana-data:/var/lib/grafana
+    networks:
+      - flashsale-network
+    restart: unless-stopped
+
+  ###############################################################################
+  # k6 - Load Test 8.000 VirtualUser (dev, staging)
+  ###############################################################################
+  flashsale-k6:
+    image: grafana/k6:latest
+    container_name: flashsale-k6
+    volumes:
+      - ./tests/Integration.Tests/k6:/scripts
+    networks:
+      - flashsale-network
+    profiles:
+      - k6
+    restart: "no"
+
+networks:
+  flashsale-network:
+    driver: bridge
+
+volumes:
+  flashsale-postgres-primary-data:
+  flashsale-postgres-replica-data:
+  flashsale-grafana-data:
