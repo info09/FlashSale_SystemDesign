@@ -11,6 +11,10 @@ builder.Services.AddApplication();
 
 var app = builder.Build();
 
+// NFR-04: Bắt buộc tất cả API endpoint chỉ cho phép gọi qua HTTPS
+// Chuyển hướng HTTP sang HTTPS tự động
+app.UseHttpsRedirection();
+
 // Đăng ký RateLimitMiddleware TRUOC khi map endpoints (FR-01, NFR-04)
 app.UseMiddleware<RateLimitMiddleware>();
 
