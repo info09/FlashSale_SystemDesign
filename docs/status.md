@@ -55,7 +55,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 2.4 (Api): Tạo InventoryController, endpoint trừ kho trả lỗi hết hàng nếu không đủ kho, không tạo Order
 - [x] Story 2.5 (Test): Viết unit test cho InventoryService (mock Redis Lua Script) — 5 test case pass
 - [x] Story 2.6 (Test): Viết integration test kiểm tra trừ kho atomic qua Redis thật (Testcontainers) — 4 test case pass
-- [] Story 2.7 (Test): Viết e2e test kiểm tra luồng HTTP: đủ kho → trừ thành công, hết hàng → trả lỗi 400, không tạo Order
+- [x] Story 2.7 (Test): Viết e2e test kiểm tra luồng HTTP: đủ kho → trừ thành công (200), hết hàng → trả lỗi 400, không tạo Order — 2 test case pass (WebApplicationFactory + Testcontainers Redis)
 - [] Story 2.8 (Perf): Đo p99 latency của AtomicInventoryOffloading mục tiêu ~18ms (NFR-01)
 
 ### Phase 3: Event-Driven Order Pipeline — FR-03
