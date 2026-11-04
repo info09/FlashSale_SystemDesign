@@ -35,6 +35,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{274C07F0-4E68-44A5-9D07-117BB129A3E2}"
+	ProjectSection(SolutionItems) = preProject
+		docs\architecture.md = docs\architecture.md
+		docs\conventions.md = docs\conventions.md
+		docs\copilot-instructions.md = docs\copilot-instructions.md
+		docs\decisions.md = docs\decisions.md
+		docs\deploy.md = docs\deploy.md
+		docs\domain-glossary.md = docs\domain-glossary.md
+		docs\finish-checklist.md = docs\finish-checklist.md
+		docs\prd.md = docs\prd.md
+		docs\status.md = docs\status.md
+		docs\ux.md = docs\ux.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -193,6 +207,7 @@ Global
 		{99999999-9999-9999-9999-999999999999} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{274C07F0-4E68-44A5-9D07-117BB129A3E2} = {FEBEBACE-DB84-4B2D-829A-CF1381BA003A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC}
