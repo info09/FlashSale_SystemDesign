@@ -90,12 +90,15 @@ Stage 1: Build
   └─ dotnet build FlashSale.Api / FlashSale.Worker (Release configuration)
 
 Stage 2: Unit Test
-  └─ dotnet test tests/FlashSale.Domain.Tests / FlashSale.Application.Tests
+  └─ dotnet test tests/FlashSale.Domain.Tests -c Release
+  └─ dotnet test tests/FlashSale.Application.Tests -c Release
   └─ Coverage tối thiểu 80% (theo docs/conventions.md mục 5.5)
 
 Stage 3: Integration Test
   └─ Khởi động Docker Compose (Testcontainers hoặc docker-compose.dev.yml)
-  └─ dotnet test tests/FlashSale.Infrastructure.Tests / FlashSale.Api.Tests / FlashSale.Worker.Tests
+  └─ dotnet test tests/FlashSale.Infrastructure.Tests -c Release
+  └─ dotnet test tests/FlashSale.Api.Tests -c Release
+  └─ dotnet test tests/FlashSale.Worker.Tests -c Release
   └─ Coverage tối thiểu 70%
 
 Stage 4: E2E / Smoke Test (staging)

@@ -357,18 +357,14 @@ public void DeductInventory_WhenStockAvailable_ShouldSucceed()
 - Không mock static method trừ khi có `Microsoft.Fakes` hay `Moq + Mock.Static` và có quyết định trong `docs/decisions.md`.
 
 ### 5.4 Test classification
-| Loại | Vị trí | Mục đích | Công cụ |
-|------|--------|----------|---------|
-| Unit | `tests/FlashSale.Domain.Tests/Unit/`, `tests/FlashSale.Application.Tests/Unit/` | Test class/service độc lập, không có DB, không có Redis, không có RabbitMQ | xUnit + Moq + FluentAssertions |
-| Integration | `tests/FlashSale.Infrastructure.Tests/Integration/`, `tests/FlashSale.Api.Tests/Integration/`, `tests/FlashSale.Worker.Tests/Integration/` | Test kết hợp Service + DbContext (Testcontainers PostgreSQL), Service + Redis (Testcontainers), Service + RabbitMQ (Testcontainers) | xUnit + Testcontainers + FluentAssertions |
-| E2E / Load | `tests/Integration.Tests/` + k6 | Test toàn bộ luồng API → Redis → RabbitMQ → AsyncWorker → PostgreSQL, giả lập 8.000 VirtualUser | k6 + xUnit |
+| Loại | Vị trí | Mục đích | Công cụ | Lệnh chạy |
+|------|--------|----------|---------|-----------|
+| Unit | `tests/FlashSale.Domain.Tests/Unit/`, `tests/FlashSale.Application.Tests/Unit/` | Test class/service độc lập, không có DB, không có Redis, không có RabbitMQ | xUnit + Moq + FluentAssertions | `dotnet test tests/FlashSale.Domain.Tests -c Release` <br> `dotnet test tests/FlashSale.Application.Tests -c Release` |
+| Integration | `tests/FlashSale.Infrastructure.Tests/Integration/`, `tests/FlashSale.Api.Tests/Integration/`, `tests/FlashSale.Worker.Tests/Integration/` | Test kết hợp Service + DbContext (Testcontainers PostgreSQL), Service + Redis (Testcontainers), Service + RabbitMQ (Testcontainers) | xUnit + Testcontainers + FluentAssertions | `dotnet test tests/FlashSale.Infrastructure.Tests -c Release` <br> `dotnet test tests/FlashSale.Api.Tests -c Release` <br> `dotnet test tests/FlashSale.Worker.Tests -c Release` |
+| E2E / Load | `tests/Integration.Tests/` + k6 | Test toàn bộ luồng API → Redis → RabbitMQ → AsyncWorker → PostgreSQL, giả lập 8.000 VirtualUser | k6 + xUnit | `dotnet test tests/Integration.Tests -c Release` <br> `k6 run tests/Integration.Tests/k6/*.js` |
+| Toàn bộ | `FlashSale.sln` | Chạy tất cả test cùng lúc | xUnit | `dotnet test FlashSale.sln -c Release` |
 
-### 5.5 Coverage tối thiểu (tương xứng với NFR-06 Data Consistency 100%, NFR-03 Error Rate < 1%)
-| Loại test | Coverage tối thiểu | Độ nghiêm ngặt |
-|-----------|-------------------|----------------|
-| Unit (Service, Middleware, Consumer, CommandHandler) | 80% | Bắt buộc pass trước khi commit |
-| Integration (DbContext, Redis, RabbitMQ) | 70% | Bắt buộc pass trước khi deploy staging |
-| E2E / Load (k6) | Không có coverage số, phải đạt NFR-01 (p99 < 20ms), NFR-03 (Error Rate < 1%) | Bắt buộc pass trước khi deploy production |
+**Lưu ý:** `dotnet test` chỉ chấp nhận **một project hoặc một solution file** mỗi lần. Không được truyền nhiều project cách nhau bằng dấu cách (ví dụ: `dotnet test tests/A tests/B` sẽ lỗi MSB1008).
 
 ### 5.6 Test data
 - Không dùng dữ liệu thật từ production trong test.

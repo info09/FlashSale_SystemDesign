@@ -57,8 +57,17 @@ jobs:
       - name: Build (Release)
         run: dotnet build FlashSale.sln -c Release --no-restore
 
-      - name: Unit Test (Domain, Application)
-        run: dotnet test tests/FlashSale.Domain.Tests tests/FlashSale.Application.Tests -c Release --no-build --verbosity normal
+      - name: Unit Test (Domain)
+        run: dotnet test tests/FlashSale.Domain.Tests -c Release --no-build --verbosity normal
 
-      - name: Integration Test (Infrastructure, Api, Worker)
-        run: dotnet test tests/FlashSale.Infrastructure.Tests tests/FlashSale.Api.Tests tests/FlashSale.Worker.Tests -c Release --no-build --verbosity normal
+      - name: Unit Test (Application)
+        run: dotnet test tests/FlashSale.Application.Tests -c Release --no-build --verbosity normal
+
+      - name: Integration Test (Infrastructure)
+        run: dotnet test tests/FlashSale.Infrastructure.Tests -c Release --no-build --verbosity normal
+
+      - name: Integration Test (Api)
+        run: dotnet test tests/FlashSale.Api.Tests -c Release --no-build --verbosity normal
+
+      - name: Integration Test (Worker)
+        run: dotnet test tests/FlashSale.Worker.Tests -c Release --no-build --verbosity normal
