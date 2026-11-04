@@ -1,4 +1,7 @@
-﻿using FlashSale.Application.Features.RateLimit.CommandHandlers;
+﻿using FlashSale.Application.Features.Inventory.CommandHandlers;
+using FlashSale.Application.Features.Inventory.Commands;
+using FlashSale.Application.Features.Inventory.Validators;
+using FlashSale.Application.Features.RateLimit.CommandHandlers;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Features.RateLimit.Validators;
 using FlashSale.Application.Interfaces;
@@ -19,11 +22,15 @@ public static class DependencyInjection
         // Đăng ký RateLimitService
         services.AddScoped<IRateLimitService, RateLimitService>();
 
+        // Đăng ký InventoryService
+        services.AddScoped<IInventoryService, InventoryService>();
+
         // Đăng ký MediatR
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RateLimitCommandHandler).Assembly));
 
         // Đăng ký Validators
         services.AddSingleton<IValidator<RateLimitCommand>, RateLimitCommandValidator>();
+        services.AddSingleton<IValidator<DeductInventoryCommand>, DeductInventoryCommandValidator>();
 
         return services;
     }
