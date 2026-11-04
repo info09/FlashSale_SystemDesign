@@ -18,4 +18,8 @@
     <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="ExternalServices/Redis/Scripts/rate_limit_token_bucket.lua" />
+  </ItemGroup>
+
 </Project>

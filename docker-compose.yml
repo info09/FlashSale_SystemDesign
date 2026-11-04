@@ -10,7 +10,11 @@ services:
       dockerfile: src/FlashSale.Api/Dockerfile
     container_name: flashsale-api
     depends_on:
-      flashsale-redis:
+      flashsale-redis-1:
+        condition: service_healthy
+      flashsale-redis-2:
+        condition: service_healthy
+      flashsale-redis-3:
         condition: service_healthy
       flashsale-rabbitmq:
         condition: service_healthy
@@ -21,7 +25,7 @@ services:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://+:8080}
       - POSTGRESQL_PRIMARY_CONNECTION_STRING=${POSTGRESQL_PRIMARY_CONNECTION_STRING}
       - POSTGRESQL_REPLICA_CONNECTION_STRING=${POSTGRESQL_REPLICA_CONNECTION_STRING}
-      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING}
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING:-flashsale-redis-1:6379,flashsale-redis-2:6380,flashsale-redis-3:6381}
       - RABBITMQ_CONNECTION_STRING=${RABBITMQ_CONNECTION_STRING}
       - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME}
       - RABBITMQ_EXCHANGE_NAME=${RABBITMQ_EXCHANGE_NAME}
@@ -61,17 +65,49 @@ services:
 
   ###############################################################################
   # Redis Cluster - RateLimit state + Inventory (atomic qua LuaScript)
+  # 3 nodes để đảm bảo trạng thái RateLimit được chia sẻ giữa nhiều instance ApiGateway
+  # (không lưu local memory trên mỗi instance, không bị bypass khi scale out - NFR-05)
   ###############################################################################
-  flashsale-redis:
+  flashsale-redis-1:
     image: redis:7-alpine
-    container_name: flashsale-redis
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    container_name: flashsale-redis-1
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--port", "6379"]
     ports:
       - "6379:6379"
     networks:
       - flashsale-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  flashsale-redis-2:
+    image: redis:7-alpine
+    container_name: flashsale-redis-2
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--port", "6380"]
+    ports:
+      - "6380:6380"
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  flashsale-redis-3:
+    image: redis:7-alpine
+    container_name: flashsale-redis-3
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--port", "6381"]
+    ports:
+      - "6381:6381"
+    networks:
+      - flashsale-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6381", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10

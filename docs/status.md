@@ -45,7 +45,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 1.6 (Test): Viết unit test cho RateLimitService (mock Redis Lua Script) — đã hoàn thành trong Story 1.2 (5 test case pass)
 - [x] Story 1.7 (Test): Viết integration test kiểm tra RateLimit qua Redis thật (Testcontainers)
 - [x] Story 1.8 (Test): Viết e2e test kiểm tra luồng HTTP: vượt ngưỡng → nhận 429, dưới ngưỡng → tiếp tục xử lý
-- [] Story 1.9 (Infra): Cấu hình RateLimit phân tán trên Redis Cluster (không lưu local memory trên mỗi instance ApiGateway)
+- [x] Story 1.9 (Infra): Cấu hình RateLimit phân tán trên Redis Cluster (không lưu local memory trên mỗi instance ApiGateway)
 
 ### Phase 2: Atomic Inventory Offloading — FR-02, NFR-01
 
@@ -118,7 +118,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
 - **Story đang làm:** Story 1.9 (Infra): Cấu hình RateLimit phân tán trên Redis Cluster (không lưu local memory trên mỗi instance ApiGateway)
-- **Lần cập nhật gần nhất:** Sửa test case RateLimitServiceTests (chuyển từ ThrowAsync<RateLimitExceededException> sang trả về RateLimitResult.IsAllowed = false cho phù hợp với việc Service trả về Result thay vì ném exception), tất cả 6 test case pass
+- **Lần cập nhật gần nhất:** Sửa RateLimitMiddleware (xử lý env var rỗng cho RATE_LIMIT_RPS/WINDOW_SECONDS), sửa Program.cs đọc Lua script từ embedded resource, sửa DependencyInjection.cs đọc Lua script từ embedded resource, tất cả 25 test case toàn dự án pass
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

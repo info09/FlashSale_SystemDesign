@@ -13,6 +13,8 @@ RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
+# Copy Lua script vào output directory để Program.cs có thể đọc
+COPY src/FlashSale.Infrastructure/ExternalServices/Redis/Scripts/rate_limit_token_bucket.lua ./Scripts/
 USER app
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080

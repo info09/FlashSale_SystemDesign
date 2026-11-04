@@ -24,8 +24,11 @@ public class RateLimitMiddleware
         _scopeFactory = scopeFactory;
 
         // Doc ngưỡng rate limit tu bien moi truong (co the override qua bien moi truong)
-        _maxRequests = int.Parse(System.Environment.GetEnvironmentVariable("RATE_LIMIT_RPS") ?? "100");
-        _windowSeconds = int.Parse(System.Environment.GetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS") ?? "60");
+        var rateLimitRpsEnv = System.Environment.GetEnvironmentVariable("RATE_LIMIT_RPS");
+        _maxRequests = string.IsNullOrWhiteSpace(rateLimitRpsEnv) ? 100 : int.Parse(rateLimitRpsEnv);
+
+        var windowSecondsEnv = System.Environment.GetEnvironmentVariable("RATE_LIMIT_WINDOW_SECONDS");
+        _windowSeconds = string.IsNullOrWhiteSpace(windowSecondsEnv) ? 60 : int.Parse(windowSecondsEnv);
     }
 
     /// <summary>

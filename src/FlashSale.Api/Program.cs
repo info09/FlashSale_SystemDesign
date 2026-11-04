@@ -1,13 +1,19 @@
 using FlashSale.Api.Middleware;
 using FlashSale.Application;
 using FlashSale.Infrastructure;
+using FlashSale.Infrastructure.ExternalServices.Redis;
+using Microsoft.Extensions.Configuration;
 
 // Đọc cấu hình từ environment variable (không hardcode secret)
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddInfrastructure(builder.Configuration);
+// Đọc nội dung Lua script từ embedded resource của Infrastructure
+var luaScriptContent = FlashSale.Infrastructure.DependencyInjection.GetLuaScriptContent();
+
+builder.Services.AddInfrastructure(builder.Configuration, luaScriptContent);
 builder.Services.AddApplication();
+builder.Services.AddSingleton(builder.Configuration);
 
 var app = builder.Build();
 
