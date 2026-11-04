@@ -1,11 +1,8 @@
-using FluentAssertions;
-using FlashSale.Application.Commands;
-using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Exceptions;
 using FlashSale.Domain.Interfaces;
-using FluentAssertions.Execution;
+using FluentAssertions;
 using Moq;
 using Xunit;
 

@@ -1,7 +1,7 @@
 using FluentValidation;
-using FlashSale.Application.Commands;
+using FlashSale.Application.Features.RateLimit.Commands;
 
-namespace FlashSale.Application.Validators;
+namespace FlashSale.Application.Features.RateLimit.Validators;
 
 /// <summary>
 /// Validator cho RateLimitCommand sử dụng FluentValidation.

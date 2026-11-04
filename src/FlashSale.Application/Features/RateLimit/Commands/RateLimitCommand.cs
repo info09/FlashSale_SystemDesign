@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace FlashSale.Application.Commands;
+namespace FlashSale.Application.Features.RateLimit.Commands;
 
 /// <summary>
 /// Command yêu cầu kiểm tra RateLimit trước khi xử lý request mua hàng.

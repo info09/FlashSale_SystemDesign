@@ -1,8 +1,8 @@
-using FlashSale.Application.Commands;
+using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Interfaces;
 using MediatR;
 
-namespace FlashSale.Application.CommandHandlers;
+namespace FlashSale.Application.Features.RateLimit.CommandHandlers;
 
 /// <summary>
 /// CommandHandler xử lý RateLimitCommand, delegate sang IRateLimitService.

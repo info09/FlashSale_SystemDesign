@@ -1,4 +1,4 @@
-using FlashSale.Application.Commands;
+using FlashSale.Application.Features.RateLimit.Commands;
 
 namespace FlashSale.Application.Interfaces;
 
