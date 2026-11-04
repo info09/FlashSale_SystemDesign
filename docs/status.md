@@ -116,7 +116,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - **Phase đang làm:** Phase 0 - Nền tảng hạ tầng & CI-CD
 - **Story đang làm:** Story 0.2 - Thêm tham chiếu giữa các project tuân theo Dependency Rule
-- **Lần cập nhật gần nhất:** Hoàn thành Story 0.1 (tạo solution + cấu trúc thư mục + build thành công 0 error)
+- **Lần cập nhật gần nhất:** Hoàn thành Story 0.1 (tạo solution + cấu trúc thư mục + build thành công 0 error, commit d2e8a92)
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
