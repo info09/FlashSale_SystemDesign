@@ -1,10 +1,10 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace FlashSale.Infrastructure.Persistence;
 
@@ -23,7 +23,7 @@ public class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public Task<string> GenerateTokenAsync(User user, CancellationToken cancellationToken = default)
+    public string GenerateTokenAsync(User user)
     {
         var secretKey = _configuration["JWT_SECRET"] ?? "FlashSaleSecretKey123456789012345678901234567890";
         var issuer = _configuration["JWT_ISSUER"] ?? "FlashSale.Api";
@@ -50,6 +50,6 @@ public class JwtTokenService : IJwtTokenService
             expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
             signingCredentials: credentials);
 
-        return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

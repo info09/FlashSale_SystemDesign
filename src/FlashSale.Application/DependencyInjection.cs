@@ -1,6 +1,8 @@
-﻿using FlashSale.Application.Features.Inventory.Commands;
+﻿using FlashSale.Application.Features.Auth.CommandHandlers;
+using FlashSale.Application.Features.Auth.Commands;
+using FlashSale.Application.Features.Auth.Validators;
+using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Features.Inventory.Validators;
-using FlashSale.Application.Features.RateLimit.CommandHandlers;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Features.RateLimit.Validators;
 using FlashSale.Application.Interfaces;
@@ -23,12 +25,14 @@ public static class DependencyInjection
         // Đăng ký InventoryService
         services.AddScoped<IInventoryService, InventoryService>();
 
-        // Đăng ký MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RateLimitCommandHandler).Assembly));
+        // Đăng ký Auth Commands & Validators
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RegisterCommandHandler).Assembly));
 
         // Đăng ký Validators
         services.AddSingleton<IValidator<RateLimitCommand>, RateLimitCommandValidator>();
         services.AddSingleton<IValidator<DeductInventoryCommand>, DeductInventoryCommandValidator>();
+        services.AddSingleton<IValidator<LoginCommand>, LoginCommandValidator>();
+        services.AddSingleton<IValidator<RegisterCommand>, RegisterCommandValidator>();
 
         return services;
     }

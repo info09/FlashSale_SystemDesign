@@ -12,5 +12,5 @@ public interface IJwtTokenService
     /// <summary>
     /// Ky JWT token cho nguoi dung da xac thuc thanh cong.
     /// </summary>
-    Task<string> GenerateTokenAsync(User user, CancellationToken cancellationToken = default);
+    string GenerateTokenAsync(User user);
 }
