@@ -13,4 +13,10 @@ public interface IInventoryService
     /// Nếu không đủ kho, trả về DeductInventoryResult.IsSuccess = false.
     /// </summary>
     Task<DeductInventoryResult> DeductInventoryAsync(string productId, int quantityToDeduct, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Thêm tồn kho (restock) cho một sản phẩm.
+    /// Trả về số lượng tồn kho sau khi thêm.
+    /// </summary>
+    Task<AddInventoryResult> AddInventoryAsync(string productId, int quantityToAdd, CancellationToken cancellationToken = default);
 }
