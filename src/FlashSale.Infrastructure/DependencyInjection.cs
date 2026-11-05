@@ -16,8 +16,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var rateLimitLuaScriptContent = FlashSale.Infrastructure.DependencyInjection.GetRateLimitLuaScriptContent();
-        var inventoryLuaScriptContent = FlashSale.Infrastructure.DependencyInjection.GetInventoryLuaScriptContent();
+        var rateLimitLuaScriptContent = GetRateLimitLuaScriptContent();
+        var inventoryLuaScriptContent = GetInventoryLuaScriptContent();
 
         // Đăng ký Redis connection
         var redisConnectionString = configuration["REDIS_CONNECTION_STRING"] ?? "localhost:6379";
@@ -53,6 +53,9 @@ public static class DependencyInjection
 
         // Đăng ký AuthService (trien khai IUserService, su dung UserManager + SignInManager cua Identity)
         services.AddScoped<IUserService, AuthService>();
+
+        // Đăng ký JwtTokenService (trien khai IJwtTokenService, ky JWT token cho Bearer authentication)
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
     }

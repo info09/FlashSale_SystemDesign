@@ -3,6 +3,9 @@ using FlashSale.Application;
 using FlashSale.Infrastructure;
 using FlashSale.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 // Đọc cấu hình từ environment variable (không hardcode secret)
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +14,25 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddControllers();
+
+// Xac thuc JWT Bearer (FR-01, NFR-04)
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JWT_ISSUER"],
+            ValidAudience = builder.Configuration["JWT_AUDIENCE"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JWT_SECRET"] ?? "FlashSaleSecretKey123456789012345678901234567890")),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
 builder.Services.AddSingleton(builder.Configuration);
 
 // OpenAPI (Swagger) + Scalar API documentation
@@ -30,6 +52,10 @@ var app = builder.Build();
 // NFR-04: Bắt buộc tất cả API endpoint chỉ cho phép gọi qua HTTPS
 // Chuyển hướng HTTP sang HTTPS tự động
 app.UseHttpsRedirection();
+
+// Xac thuc va phan quyen (FR-01, NFR-04)
+app.UseAuthentication();
+app.UseAuthorization();
 
 // OpenAPI endpoint (Swagger JSON)
 app.UseSwagger();
