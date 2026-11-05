@@ -83,7 +83,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ### Phase 4: Async Worker & Transactional Outbox — FR-04, FR-05, NFR-06
 
-- [] Story 4.1 (Domain): Tạo entity Outbox, interface IOutboxRepository trong FlashSale.Domain
+- [x] Story 4.1 (Domain): Tạo entity Outbox, interface IOutboxRepository trong FlashSale.Domain — build 0 error
 - [] Story 4.2 (Application): Tạo OutboxService, OutboxPublisher trong FlashSale.Application
 - [] Story 4.3 (Infrastructure): Tạo PostgreSQLPrimaryContext, ReadReplicaContext, migration cho bảng Order và Outbox; triển khai OrderRepository, OutboxRepository trong FlashSale.Infrastructure/Persistence/
 - [] Story 4.4 (Application): Triển khai ghi Order + Outbox vào PostgreSQLPrimary trong cùng 1 transaction (Transactional Outbox Pattern)
@@ -143,6 +143,7 @@ hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository 
 - Hoàn thành Story 3.5 (Test): Viết unit test cho OrderCreatedMessage (3 case) và RabbitMqPublisherService (3 case, mock RabbitMQ qua Moq) — tất cả 6 test case pass; build 0 error
 - Hoàn thành Story 3.6 (Test): Viết integration test RabbitMqPublisherIntegrationTest (2 case) kiểm tra publish message vào RabbitMQ thật qua Testcontainers, verify body JSON và message properties (ContentType, CorrelationId, MessageId, Persistent); build 0 error
 - Hoàn thành Story 3.7 (Test): Viết e2e test FlashSaleBuyEndToEndTest (2 case) kiểm tra luồng HTTP: đủ kho → 202 Accepted + Order lưu PostgreSQL + RabbitMQ pipeline hoạt động; hết kho → 400 BUSINESS_ERROR; thêm package Testcontainers.PostgreSql, Testcontainers.RabbitMq, RabbitMQ.Client vào Integration.Tests.csproj; build 0 error, 14/14 Integration.Tests pass
+- Hoàn thành Story 4.1 (Domain): Tạo entity Outbox (src/FlashSale.Domain/Entities/Outbox.cs) và interface IOutboxRepository (src/FlashSale.Domain/Interfaces/IOutboxRepository.cs) cho Transactional Outbox Pattern (FR-04, NFR-06); build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
