@@ -23,6 +23,9 @@
     <PackageReference Include="FluentAssertions" Version="7.0.0" />
     <PackageReference Include="Testcontainers" Version="3.6.0" />
     <PackageReference Include="Testcontainers.Redis" Version="3.6.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="3.6.0" />
+    <PackageReference Include="Testcontainers.RabbitMq" Version="3.6.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.6.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
   </ItemGroup>

@@ -79,7 +79,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 3.4 (Api): Tạo FlashSaleController, endpoint mua hàng trả Http202Accepted ngay cho FlashSaleShopper sau khi đẩy Message vào Queue, không chờ xử lý xong
 - [x] Story 3.5 (Test): Viết unit test cho OrderCreatedMessage và RabbitMqPublisherService (mock RabbitMQ) — 6 test case pass (OrderCreatedMessageTests 3, RabbitMqPublisherServiceTests 3)
 - [x] Story 3.6 (Test): Viết integration test kiểm tra publish message vào RabbitMQ thật (Testcontainers) — 2 test case pass (RabbitMqPublisherIntegrationTest)
-- [] Story 3.7 (Test): Viết e2e test kiểm tra luồng HTTP: trừ kho thành công → publish message → nhận 202 Accepted
+- [x] Story 3.7 (Test): Viết e2e test kiểm tra luồng HTTP: trừ kho thành công → publish message → nhận 202 Accepted — 2 test case pass (FlashSaleBuyEndToEndTest)
 
 ### Phase 4: Async Worker & Transactional Outbox — FR-04, FR-05, NFR-06
 
@@ -142,6 +142,7 @@ hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository 
 - Tạo migration `20261105043932_CreateOrdersTable.cs` cho bảng Order (Id, ProductId, Quantity, ClientId, OrderStatus, CreatedOn) với Up/Down reversible; build 0 error
 - Hoàn thành Story 3.5 (Test): Viết unit test cho OrderCreatedMessage (3 case) và RabbitMqPublisherService (3 case, mock RabbitMQ qua Moq) — tất cả 6 test case pass; build 0 error
 - Hoàn thành Story 3.6 (Test): Viết integration test RabbitMqPublisherIntegrationTest (2 case) kiểm tra publish message vào RabbitMQ thật qua Testcontainers, verify body JSON và message properties (ContentType, CorrelationId, MessageId, Persistent); build 0 error
+- Hoàn thành Story 3.7 (Test): Viết e2e test FlashSaleBuyEndToEndTest (2 case) kiểm tra luồng HTTP: đủ kho → 202 Accepted + Order lưu PostgreSQL + RabbitMQ pipeline hoạt động; hết kho → 400 BUSINESS_ERROR; thêm package Testcontainers.PostgreSql, Testcontainers.RabbitMq, RabbitMQ.Client vào Integration.Tests.csproj; build 0 error, 14/14 Integration.Tests pass
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
