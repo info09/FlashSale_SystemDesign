@@ -238,6 +238,8 @@ public class AuthEndToEndTest : IAsyncLifetime
 
         // Act
         var response = await client.PostAsync("/api/v1/inventory/deduct", deductContent);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"INVENTORY_RESPONSE: {response.StatusCode} - {responseBody}");
 
         // Assert: 200 neu du kho, 400 neu het kho, 401/403 neu auth khong duoc phep,
         // 404 neu route chua duoc map trong moi truong test (chi can khong phai 500)

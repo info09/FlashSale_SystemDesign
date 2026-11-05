@@ -1,14 +1,13 @@
-using System.IO;
-using System.Text.Json;
-using System.Threading;
-using FluentAssertions;
 using FlashSale.Api.Middleware;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Interfaces;
+using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
+using System.Text.Json;
 using Xunit;
 
 namespace FlashSale.Api.Tests.Unit;
@@ -17,12 +16,14 @@ public class RateLimitMiddlewareTests
 {
     private readonly Mock<IRateLimitService> _rateLimitServiceMock;
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
+    private readonly Mock<ILogger<RateLimitMiddleware>> _loggerMock;
     private readonly RateLimitMiddleware _middleware;
 
     public RateLimitMiddlewareTests()
     {
         _rateLimitServiceMock = new Mock<IRateLimitService>();
         _scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        _loggerMock = new Mock<ILogger<RateLimitMiddleware>>();
 
         // Mac dau: 100 requests / 60 giay
         var config = new ConfigurationBuilder()

@@ -51,4 +51,4 @@ end
 redis.call("SET", key, tokens .. ":" .. lastRefill)
 redis.call("EXPIRE", key, windowSeconds * 2)
 
-return { allowed, tokens, resetAfter }
+return allowed .. "," .. tokens .. "," .. resetAfter

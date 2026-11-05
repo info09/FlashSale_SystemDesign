@@ -47,7 +47,7 @@ public class ExceptionHandlerMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred.");
-            await WriteErrorResponse(context, StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "Co loi xay ra. Vui long thu lai sau.");
+            await WriteErrorResponse(context, StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", ex.Message);
         }
     }
 
