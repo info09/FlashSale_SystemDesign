@@ -39,6 +39,11 @@ public class ExceptionHandlerMiddleware
                 ex.ClientId, ex.ResetAfterSeconds);
             await WriteErrorResponse(context, StatusCodes.Status429TooManyRequests, "RATE_LIMIT_EXCEEDED", ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Business error: {Message}", ex.Message);
+            await WriteErrorResponse(context, StatusCodes.Status400BadRequest, "BUSINESS_ERROR", ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred.");
