@@ -66,6 +66,9 @@ public static class DependencyInjection
         // Đăng ký OutboxRepository (trien khai IOutboxRepository, Transactional Outbox Pattern)
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
+        // Đăng ký UnitOfWork (quan ly transaction PostgreSQLPrimary, Transactional Outbox Pattern)
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         // Đăng ký RabbitMqPublisherService (trien khai IRabbitMqPublisherService, publish OrderCreatedMessage vao Queue)
         var rabbitMqConnectionString = configuration["RABBITMQ_CONNECTION_STRING"] ?? "amqp://guest:guest@localhost:5672/";
         services.AddSingleton<IRabbitMqPublisherService>(_ => new RabbitMqPublisherService(rabbitMqConnectionString));

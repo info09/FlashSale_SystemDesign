@@ -86,7 +86,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 4.1 (Domain): Tạo entity Outbox, interface IOutboxRepository trong FlashSale.Domain — build 0 error
 - [x] Story 4.2 (Application): Tạo OutboxService, OutboxPublisher trong FlashSale.Application — build 0 error
 - [x] Story 4.3 (Infrastructure): Tạo OutboxRepository, thêm DbSet<Outbox> vào PostgreSQLPrimaryContext, migration CreateOutboxTable (Up/Down reversible) trong FlashSale.Infrastructure/Persistence/; đăng ký IOutboxRepository→OutboxRepository trong DependencyInjection.cs; build 0 error
-- [] Story 4.4 (Application): Triển khai ghi Order + Outbox vào PostgreSQLPrimary trong cùng 1 transaction (Transactional Outbox Pattern)
+- [x] Story 4.4 (Application): Triển khai ghi Order + Outbox vào PostgreSQLPrimary trong cùng 1 transaction (Transactional Outbox Pattern) — OrderService.CreateOrderAsync ghi Order + Outbox trong 1 transaction qua IUnitOfWork; build 0 error; OrderServiceTests 5 case pass; OutboxRepositoryIntegrationTest 2 case pass
 - [] Story 4.5 (Worker): Tạo AsyncWorker (.NET 8 Background Service) trong FlashSale.Worker/
 - [] Story 4.6 (Worker): Tạo MassTransit consumer OrderCreatedConsumer tiêu thụ Message từ Queue
 - [] Story 4.7 (Worker): Triển khai Retry với ExponentialBackoff (tối đa 3 lần) khi xử lý message thất bại
@@ -146,6 +146,7 @@ hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository 
 - Hoàn thành Story 4.1 (Domain): Tạo entity Outbox (src/FlashSale.Domain/Entities/Outbox.cs) và interface IOutboxRepository (src/FlashSale.Domain/Interfaces/IOutboxRepository.cs) cho Transactional Outbox Pattern (FR-04, NFR-06); build 0 error
 - Hoàn thành Story 4.2 (Application): Tạo IOutboxService, OutboxService, IOutboxPublisher, OutboxPublisher trong FlashSale.Application; đăng ký DI (IOutboxService→OutboxService, IOutboxPublisher→OutboxPublisher) trong DependencyInjection.cs; OutboxPublisher xuất phat ghi Outbox chưa xử lý ra RabbitMQ Queue qua IRabbitMqPublisherService, đánh dấu Published/Failed; build 0 error
 - Hoàn thành Story 4.3 (Infrastructure): Tạo OutboxRepository (GetByIdAsync, AddAsync, GetUnprocessedAsync, UpdateAsync) trong src/FlashSale.Infrastructure/Persistence/OutboxRepository.cs; thêm DbSet<Outbox> vào PostgreSQLPrimaryContext; tạo migration 20261105050000_CreateOutboxTable.cs (Up/Down reversible, bảng Outbox + index ProcessingStatus/OccurredOn); đăng ký IOutboxRepository→OutboxRepository trong DependencyInjection.cs; build 0 error; Domain.Tests 12/12, Application.Tests 11/11 pass
+- Hoàn thành Story 4.4 (Application): Triển khai ghi Order + Outbox trong cung 1 transaction PostgreSQLPrimary (Transactional Outbox Pattern, FR-04, NFR-06): tao IUnitOfWork (src/FlashSale.Domain/Interfaces/IUnitOfWork.cs) + UnitOfWork (src/FlashSale.Infrastructure/Persistence/UnitOfWork.cs); sua OrderService.CreateOrderAsync ghi Order + Outbox cung luc, commit/rollback dong bo; sua OrderRepository/OutboxRepository khong auto-SaveChanges (quan ly boi IUnitOfWork); dang ky IUnitOfWork→UnitOfWork trong DependencyInjection.cs; OrderServiceTests 5 case pass; OutboxRepositoryIntegrationTest 2 case pass (Order+Outbox cung transaction, rollback khong luu); build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

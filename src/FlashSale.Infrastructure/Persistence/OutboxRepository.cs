@@ -32,7 +32,6 @@ public class OutboxRepository : IOutboxRepository
     public async Task AddAsync(Outbox outbox, CancellationToken cancellationToken = default)
     {
         await _context.Outboxes.AddAsync(outbox, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<List<Outbox>> GetUnprocessedAsync(int limit, CancellationToken cancellationToken = default)
@@ -51,6 +50,5 @@ public class OutboxRepository : IOutboxRepository
     public async Task UpdateAsync(Outbox outbox, CancellationToken cancellationToken = default)
     {
         _context.Outboxes.Update(outbox);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 }
