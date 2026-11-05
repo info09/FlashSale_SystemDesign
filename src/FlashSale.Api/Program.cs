@@ -96,7 +96,7 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.MigrateAsync();
 
         // Seed người dùng admin và các vai trò
-        //await AdminSeeder.InitializeAsync(services);
+        await AdminSeeder.InitializeAsync(services);
     }
     catch (Exception ex)
     {
