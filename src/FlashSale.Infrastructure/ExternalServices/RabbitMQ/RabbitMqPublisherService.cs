@@ -19,15 +19,18 @@ public class RabbitMqPublisherService : IRabbitMqPublisherService, IDisposable
     private readonly IModel _channel;
 
     public RabbitMqPublisherService(string connectionString)
-    {
-        var factory = new ConnectionFactory
+        : this(new ConnectionFactory
         {
             Uri = new Uri(connectionString),
             AutomaticRecoveryEnabled = true,
             NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
-        };
+        }.CreateConnection())
+    {
+    }
 
-        _connection = factory.CreateConnection();
+    public RabbitMqPublisherService(IConnection connection)
+    {
+        _connection = connection;
         _channel = _connection.CreateModel();
 
         // Khai báo Exchange (durable để soprav lại khi broker restart)

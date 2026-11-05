@@ -77,7 +77,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 3.2 (Application): Tạo CreateOrderCommand, CreateOrderCommandHandler, OrderService, message contract OrderCreatedMessage (có CorrelationId, MessageId, OccurredOn, Payload) trong FlashSale.Application
 - [x] Story 3.3 (Infrastructure): Cấu hình RabbitMQ Exchange/Queue/Routing Key (tên chốt trong docs/decisions.md, dùng thuật ngữ OrderPipeline, Queue, Message); triển khai RabbitMqPublisherService trong FlashSale.Infrastructure/ExternalServices/RabbitMQ/
 - [x] Story 3.4 (Api): Tạo FlashSaleController, endpoint mua hàng trả Http202Accepted ngay cho FlashSaleShopper sau khi đẩy Message vào Queue, không chờ xử lý xong
-- [] Story 3.5 (Test): Viết unit test cho OrderCreatedMessage và RabbitMqPublisherService (mock RabbitMQ)
+- [x] Story 3.5 (Test): Viết unit test cho OrderCreatedMessage và RabbitMqPublisherService (mock RabbitMQ) — 6 test case pass (OrderCreatedMessageTests 3, RabbitMqPublisherServiceTests 3)
 - [] Story 3.6 (Test): Viết integration test kiểm tra publish message vào RabbitMQ thật (Testcontainers)
 - [] Story 3.7 (Test): Viết e2e test kiểm tra luồng HTTP: trừ kho thành công → publish message → nhận 202 Accepted
 
@@ -140,6 +140,7 @@ hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository 
 - Hoàn thành Story 3.4 (Api): Tạo FlashSaleController, endpoint /api/v1/flash-sale/buy trả Http202Accepted ngay cho FlashSaleShopper sau khi đẩy Message vào Queue, không chờ xử lý xong; bảo vệ bằng [Authorize]; build 0 error
 - Sửa lỗi DI: Tạo OrderRepository trong Infrastructure/Persistence/OrderRepository.cs; thêm DbSet<Order> vào PostgreSQLPrimaryContext; đăng ký IOrderRepository → OrderRepository trong DependencyInjection.cs; build 0 error
 - Tạo migration `20261105043932_CreateOrdersTable.cs` cho bảng Order (Id, ProductId, Quantity, ClientId, OrderStatus, CreatedOn) với Up/Down reversible; build 0 error
+- Hoàn thành Story 3.5 (Test): Viết unit test cho OrderCreatedMessage (3 case) và RabbitMqPublisherService (3 case, mock RabbitMQ qua Moq) — tất cả 6 test case pass; build 0 error
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 

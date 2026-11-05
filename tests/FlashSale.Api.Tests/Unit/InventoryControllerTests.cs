@@ -1,11 +1,11 @@
-using System.Text.Json;
-using FluentAssertions;
 using FlashSale.Api.Controllers;
 using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Interfaces;
+using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using System.Text.Json;
 using Xunit;
 
 namespace FlashSale.Api.Tests.Unit;
@@ -20,7 +20,7 @@ public class InventoryControllerTests
     {
         _mediatorMock = new Mock<IMediator>();
         _inventoryServiceMock = new Mock<IInventoryService>();
-        _controller = new InventoryController(_mediatorMock.Object, _inventoryServiceMock.Object);
+        _controller = new InventoryController(_mediatorMock.Object);
     }
 
     [Fact]
@@ -121,6 +121,10 @@ public class InventoryControllerTests
         var request = new AddInventoryRequest("product-1", 100);
         _inventoryServiceMock
             .Setup(x => x.AddInventoryAsync(request.ProductId, request.QuantityToAdd, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddInventoryResult(true, 100, 100));
+
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<AddInventoryCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AddInventoryResult(true, 100, 100));
 
         // Act
