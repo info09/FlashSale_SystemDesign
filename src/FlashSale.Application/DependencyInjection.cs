@@ -3,6 +3,8 @@ using FlashSale.Application.Features.Auth.Commands;
 using FlashSale.Application.Features.Auth.Validators;
 using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Features.Inventory.Validators;
+using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Features.Order.Validators;
 using FlashSale.Application.Features.RateLimit.Commands;
 using FlashSale.Application.Features.RateLimit.Validators;
 using FlashSale.Application.Interfaces;
@@ -28,11 +30,15 @@ public static class DependencyInjection
         // Đăng ký Auth Commands & Validators
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RegisterCommandHandler).Assembly));
 
+        // Đăng ký OrderService
+        services.AddScoped<IOrderService, OrderService>();
+
         // Đăng ký Validators
         services.AddSingleton<IValidator<RateLimitCommand>, RateLimitCommandValidator>();
         services.AddSingleton<IValidator<DeductInventoryCommand>, DeductInventoryCommandValidator>();
         services.AddSingleton<IValidator<LoginCommand>, LoginCommandValidator>();
         services.AddSingleton<IValidator<RegisterCommand>, RegisterCommandValidator>();
+        services.AddSingleton<IValidator<CreateOrderCommand>, CreateOrderCommandValidator>();
 
         return services;
     }
