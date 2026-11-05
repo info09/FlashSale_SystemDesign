@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
-using FlashSale.Application.Features.Order.Commands;
 using FlashSale.Domain.Entities;
 using Xunit;
+using FlashSale.Application.Features.Inventory.Events;
 
 namespace FlashSale.Infrastructure.Tests.Unit;
 

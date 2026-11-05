@@ -1,5 +1,5 @@
 using System.Text.Json;
-using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;

@@ -1,4 +1,4 @@
-using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;

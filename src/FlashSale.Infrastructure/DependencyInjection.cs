@@ -1,8 +1,6 @@
-﻿using FlashSale.Application.Features.Order.Commands;
-using FlashSale.Application.Interfaces;
-using FlashSale.Domain.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.Redis;
+﻿using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using FlashSale.Infrastructure.ExternalServices.Redis;
 using FlashSale.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

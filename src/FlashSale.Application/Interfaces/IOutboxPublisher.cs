@@ -1,5 +1,3 @@
-using FlashSale.Application.Features.Order.Commands;
-
 namespace FlashSale.Application.Interfaces;
 
 /// <summary>

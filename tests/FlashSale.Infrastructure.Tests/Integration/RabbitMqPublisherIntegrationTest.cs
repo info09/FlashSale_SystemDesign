@@ -1,12 +1,12 @@
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
-using FlashSale.Application.Features.Order.Commands;
 using FlashSale.Domain.Entities;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using RabbitMQ.Client;
 using Testcontainers.RabbitMq;
 using Xunit;
+using FlashSale.Application.Features.Inventory.Events;
 
 namespace FlashSale.Infrastructure.Tests.Integration;
 

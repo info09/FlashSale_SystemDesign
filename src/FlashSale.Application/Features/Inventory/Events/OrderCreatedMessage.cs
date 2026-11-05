@@ -1,7 +1,7 @@
 using System.Text.Json;
 using OrderEntity = FlashSale.Domain.Entities.Order;
 
-namespace FlashSale.Application.Features.Order.Commands;
+namespace FlashSale.Application.Features.Inventory.Events;
 
 /// <summary>
 /// Message contract cho sự kiện Order được tạo thành công.

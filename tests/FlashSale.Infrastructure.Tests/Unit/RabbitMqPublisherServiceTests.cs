@@ -1,11 +1,11 @@
 using FluentAssertions;
-using FlashSale.Application.Features.Order.Commands;
 using FlashSale.Domain.Entities;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using Moq;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Xunit;
+using FlashSale.Application.Features.Inventory.Events;
 
 namespace FlashSale.Infrastructure.Tests.Unit;
 

@@ -1,4 +1,4 @@
-using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Text.Json;

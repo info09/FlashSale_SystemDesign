@@ -1,5 +1,5 @@
-using FluentValidation;
 using FlashSale.Application.Features.Inventory.Commands;
+using FluentValidation;
 
 namespace FlashSale.Application.Features.Inventory.Validators;
 
@@ -15,8 +15,12 @@ public class DeductInventoryCommandValidator : AbstractValidator<DeductInventory
             .NotEmpty()
             .WithMessage("ProductId không được để trống");
 
-        RuleFor(x => x.QuantityToDeduct)
+        RuleFor(x => x.Quantity)
             .GreaterThan(0)
-            .WithMessage("QuantityToDeduct phải lớn hơn 0");
+            .WithMessage("Quantity phải lớn hơn 0");
+
+        RuleFor(x => x.ClientId)
+            .NotEmpty()
+            .WithMessage("ClientId không được để trống");
     }
 }

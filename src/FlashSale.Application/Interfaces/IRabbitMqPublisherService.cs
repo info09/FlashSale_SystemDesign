@@ -1,4 +1,4 @@
-using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Features.Inventory.Events;
 
 namespace FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 
