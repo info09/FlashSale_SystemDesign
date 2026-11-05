@@ -2,6 +2,7 @@ using FlashSale.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
 
 namespace FlashSale.Api.Middleware;
 
@@ -40,8 +41,16 @@ public class RateLimitMiddleware
     /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
-        // Lay ClientId tu header X-Client-Id (co the sua lai sau khi co chuan auth JWT/API key)
-        var clientId = context.Request.Headers["X-Client-Id"].FirstOrDefault();
+        // Lay ClientId tu claim NameIdentifier cua user da xac thuc (JWT Bearer).
+        // Neu chua xac thuc, fallback ve header X-Client-Id, sau do IP.
+        var clientId = context.User.Identity?.IsAuthenticated == true
+            ? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            : null;
+
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            clientId = context.Request.Headers["X-Client-Id"].FirstOrDefault();
+        }
 
         if (string.IsNullOrWhiteSpace(clientId))
         {
