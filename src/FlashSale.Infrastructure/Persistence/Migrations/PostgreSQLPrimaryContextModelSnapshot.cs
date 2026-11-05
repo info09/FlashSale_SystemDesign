@@ -51,6 +51,48 @@ namespace FlashSale.Infrastructure.Persistence.Migrations
                     b.ToTable("Order", (string)null);
                 });
 
+            modelBuilder.Entity("FlashSale.Domain.Entities.Outbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("OccurredOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ProcessedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProcessingStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredOn");
+
+                    b.HasIndex("ProcessingStatus");
+
+                    b.ToTable("Outbox", (string)null);
+                });
+
             modelBuilder.Entity("FlashSale.Infrastructure.Persistence.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")

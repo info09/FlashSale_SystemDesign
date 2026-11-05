@@ -20,6 +20,7 @@ public class PostgreSQLPrimaryContext : IdentityDbContext<ApplicationUser, Ident
     }
 
     public DbSet<Order> Orders { get; set; }
+    public DbSet<Outbox> Outboxes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -35,6 +36,13 @@ public class PostgreSQLPrimaryContext : IdentityDbContext<ApplicationUser, Ident
         builder.Entity<Order>(entity =>
         {
             entity.ToTable("Order");
+        });
+
+        builder.Entity<Outbox>(entity =>
+        {
+            entity.ToTable("Outbox");
+            entity.HasIndex(o => o.ProcessingStatus);
+            entity.HasIndex(o => o.OccurredOn);
         });
 
         builder.Entity<IdentityRole<Guid>>(entity =>

@@ -85,7 +85,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - [x] Story 4.1 (Domain): Tạo entity Outbox, interface IOutboxRepository trong FlashSale.Domain — build 0 error
 - [x] Story 4.2 (Application): Tạo OutboxService, OutboxPublisher trong FlashSale.Application — build 0 error
-- [] Story 4.3 (Infrastructure): Tạo PostgreSQLPrimaryContext, ReadReplicaContext, migration cho bảng Order và Outbox; triển khai OrderRepository, OutboxRepository trong FlashSale.Infrastructure/Persistence/
+- [x] Story 4.3 (Infrastructure): Tạo OutboxRepository, thêm DbSet<Outbox> vào PostgreSQLPrimaryContext, migration CreateOutboxTable (Up/Down reversible) trong FlashSale.Infrastructure/Persistence/; đăng ký IOutboxRepository→OutboxRepository trong DependencyInjection.cs; build 0 error
 - [] Story 4.4 (Application): Triển khai ghi Order + Outbox vào PostgreSQLPrimary trong cùng 1 transaction (Transactional Outbox Pattern)
 - [] Story 4.5 (Worker): Tạo AsyncWorker (.NET 8 Background Service) trong FlashSale.Worker/
 - [] Story 4.6 (Worker): Tạo MassTransit consumer OrderCreatedConsumer tiêu thụ Message từ Queue
@@ -145,6 +145,7 @@ hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository 
 - Hoàn thành Story 3.7 (Test): Viết e2e test FlashSaleBuyEndToEndTest (2 case) kiểm tra luồng HTTP: đủ kho → 202 Accepted + Order lưu PostgreSQL + RabbitMQ pipeline hoạt động; hết kho → 400 BUSINESS_ERROR; thêm package Testcontainers.PostgreSql, Testcontainers.RabbitMq, RabbitMQ.Client vào Integration.Tests.csproj; build 0 error, 14/14 Integration.Tests pass
 - Hoàn thành Story 4.1 (Domain): Tạo entity Outbox (src/FlashSale.Domain/Entities/Outbox.cs) và interface IOutboxRepository (src/FlashSale.Domain/Interfaces/IOutboxRepository.cs) cho Transactional Outbox Pattern (FR-04, NFR-06); build 0 error
 - Hoàn thành Story 4.2 (Application): Tạo IOutboxService, OutboxService, IOutboxPublisher, OutboxPublisher trong FlashSale.Application; đăng ký DI (IOutboxService→OutboxService, IOutboxPublisher→OutboxPublisher) trong DependencyInjection.cs; OutboxPublisher xuất phat ghi Outbox chưa xử lý ra RabbitMQ Queue qua IRabbitMqPublisherService, đánh dấu Published/Failed; build 0 error
+- Hoàn thành Story 4.3 (Infrastructure): Tạo OutboxRepository (GetByIdAsync, AddAsync, GetUnprocessedAsync, UpdateAsync) trong src/FlashSale.Infrastructure/Persistence/OutboxRepository.cs; thêm DbSet<Outbox> vào PostgreSQLPrimaryContext; tạo migration 20261105050000_CreateOutboxTable.cs (Up/Down reversible, bảng Outbox + index ProcessingStatus/OccurredOn); đăng ký IOutboxRepository→OutboxRepository trong DependencyInjection.cs; build 0 error; Domain.Tests 12/12, Application.Tests 11/11 pass
 
 ## 4. Deferred Work (việc đã cố ý hoãn)
 
