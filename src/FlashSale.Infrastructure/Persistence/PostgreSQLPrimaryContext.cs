@@ -1,3 +1,5 @@
+using FlashSale.Domain.Entities;
+using FlashSale.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,8 @@ public class PostgreSQLPrimaryContext : IdentityDbContext<ApplicationUser, Ident
     {
     }
 
+    public DbSet<Order> Orders { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -26,6 +30,11 @@ public class PostgreSQLPrimaryContext : IdentityDbContext<ApplicationUser, Ident
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.ToTable("User");
+        });
+
+        builder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Order");
         });
 
         builder.Entity<IdentityRole<Guid>>(entity =>
