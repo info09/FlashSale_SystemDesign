@@ -1,11 +1,15 @@
 using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using FlashSale.Worker.Consumers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -57,12 +61,19 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         };
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
+        var queueArgs = new Dictionary<string, object>
+        {
+            { "x-dead-letter-exchange", RabbitMqConstants.DeadLetterExchangeName },
+            { "x-dead-letter-routing-key", RabbitMqConstants.DeadLetterRoutingKey },
+            { "x-max-length", 100000 },
+            { "x-message-ttl", 86400000 }
+        };
         channel.QueueDeclare(
             queue: RabbitMqConstants.QueueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
-            arguments: null);
+            arguments: queueArgs);
     }
 
     private void PurgeQueue()
@@ -167,21 +178,8 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         body.Should().Contain("\"quantity\":10");
         body.Should().Contain("\"orderStatus\":\"Created\"");
 
-        // Assert: Order da duoc luu vao PostgreSQL
-        using (var scope = factory.Services.CreateScope())
-        {
-            var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
-            var orderBodyDoc = JsonDocument.Parse(body);
-            var orderId = Guid.Parse(orderBodyDoc.RootElement.GetProperty("orderId").GetString()!);
-            var order = await orderRepository.GetByIdAsync(orderId);
-            order.Should().NotBeNull();
-            order!.ProductId.Should().Be("product-1");
-            order.Quantity.Should().Be(10);
-            order.ClientId.Should().NotBeNullOrWhiteSpace();
-            order.OrderStatus.Should().Be("Created");
-        }
-
-        // Assert: RabbitMQ pipeline hoat dong - publish message truc tiep vao Exchange va doc lai tu Queue
+        // Assert: Async Worker consume message va luu Order + Outbox vao PostgreSQLPrimary trong cung 1 transaction
+        // (Simulate publisher da verify o Story 3.6/3.7: publish message vao Exchange, doc lai tu Queue)
         var factoryMq = new ConnectionFactory
         {
             Uri = new Uri(_rabbitMqContainer.GetConnectionString()),
@@ -189,7 +187,6 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         };
         using var connectionMq = factoryMq.CreateConnection();
         using var channelMq = connectionMq.CreateModel();
-        // Khai bao lai exchange + bind queue (dam bo queue ton tai truoc khi publish)
         channelMq.ExchangeDeclare(exchange: RabbitMqConstants.ExchangeName, type: ExchangeType.Direct, durable: true, autoDelete: false);
         channelMq.QueueBind(queue: RabbitMqConstants.QueueName, exchange: RabbitMqConstants.ExchangeName, routingKey: RabbitMqConstants.RoutingKey);
 
@@ -198,7 +195,7 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
             CorrelationId = Guid.NewGuid(),
             MessageId = Guid.NewGuid(),
             OccurredOn = DateTimeOffset.UtcNow,
-            Payload = new { productId = "product-1", quantity = 10, clientId = userName, orderStatus = "Created" }
+            Payload = new { orderId = Guid.NewGuid(), productId = "product-1", quantity = 10, clientId = userName, orderStatus = "Created", createdOn = DateTimeOffset.UtcNow }
         };
         var bodyBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(testMessage));
         channelMq.BasicPublish(exchange: RabbitMqConstants.ExchangeName, routingKey: RabbitMqConstants.RoutingKey, mandatory: false, basicProperties: null, body: bodyBytes);
@@ -209,7 +206,27 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         var bodyDoc = JsonDocument.Parse(bodyJson);
         bodyDoc.RootElement.GetProperty("Payload").GetProperty("productId").GetString().Should().Be("product-1");
         bodyDoc.RootElement.GetProperty("Payload").GetProperty("quantity").GetInt32().Should().Be(10);
+        bodyDoc.RootElement.GetProperty("Payload").GetProperty("clientId").GetString().Should().Be(userName);
         bodyDoc.RootElement.GetProperty("Payload").GetProperty("orderStatus").GetString().Should().Be("Created");
+        var orderIdFromMessage = Guid.Parse(bodyDoc.RootElement.GetProperty("Payload").GetProperty("orderId").GetString()!);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            var outboxService = scope.ServiceProvider.GetRequiredService<IOutboxService>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<OrderCreatedConsumerService>>();
+            var consumer = new OrderCreatedConsumerService(orderRepository, outboxService, unitOfWork, logger);
+
+            await consumer.ProcessMessageAsync(bodyJson, CancellationToken.None);
+
+            var order = await orderRepository.GetByIdAsync(orderIdFromMessage);
+            order.Should().NotBeNull();
+            order!.ProductId.Should().Be("product-1");
+            order.Quantity.Should().Be(10);
+            order.ClientId.Should().NotBeNullOrWhiteSpace();
+            order.OrderStatus.Should().Be("Created");
+        }
     }
 
     private static (byte[] Body, RabbitMQ.Client.IBasicProperties Properties)? WaitForMessage(IModel channel, string queueName, TimeSpan timeout)
@@ -253,9 +270,10 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         // Act
         var response = await client.PostAsync("/api/v1/flash-sale/buy", content);
 
-        // Assert: tra ve 400 BadRequest (het kho, InvalidOperationException duoc bat boi ExceptionHandlerMiddleware)
+        // Assert: tra ve 400 BadRequest (het kho, InventoryService tra IsSuccess = false)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("BUSINESS_ERROR");
+        body.Should().Contain("INSUFFICIENT_INVENTORY");
+        body.Should().Contain("đã hết hàng");
     }
 }

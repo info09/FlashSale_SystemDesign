@@ -1,7 +1,5 @@
 using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Interfaces;
-using FlashSale.Domain.Entities;
-using FlashSale.Domain.Exceptions;
 using FlashSale.Domain.Interfaces;
 
 namespace FlashSale.Application.Services;

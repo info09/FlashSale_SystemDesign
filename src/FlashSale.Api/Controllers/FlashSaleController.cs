@@ -1,8 +1,6 @@
 using FlashSale.Application.Features.Order.Commands;
 using FlashSale.Application.Interfaces;
-using FlashSale.Application.Services;
 using FlashSale.Domain.Entities;
-using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,18 +20,19 @@ namespace FlashSale.Api.Controllers;
 [ApiExplorerSettings(GroupName = "v1")]
 public class FlashSaleController : ControllerBase
 {
-    private readonly IOrderService _orderService;
+    private readonly IInventoryService _inventoryService;
     private readonly IRabbitMqPublisherService _rabbitMqPublisherService;
 
-    public FlashSaleController(IOrderService orderService, IRabbitMqPublisherService rabbitMqPublisherService)
+    public FlashSaleController(IInventoryService inventoryService, IRabbitMqPublisherService rabbitMqPublisherService)
     {
-        _orderService = orderService;
+        _inventoryService = inventoryService;
         _rabbitMqPublisherService = rabbitMqPublisherService;
     }
 
     /// <summary>
     /// Mua hàng (đặt đơn) cho một sản phẩm.
-    /// Sau khi trừ kho thành công, đẩy thông tin tạo đơn vào RabbitMQ Queue và trả về HTTP 202 Accepted ngay cho client.
+    /// Trừ kho atomic trên Redis, sau đó đẩy thông tin tạo đơn vào RabbitMQ Queue và trả về HTTP 202 Accepted ngay cho client.
+    /// Order + Outbox được ghi vào PostgreSQLPrimary bởi Async Worker (không ghi tại API).
     /// </summary>
     /// <param name="request">Thông tin mua hàng: ProductId và Quantity.</param>
     /// <returns>Kết quả mua hàng: thành công (202 Accepted) hoặc hết hàng (400).</returns>
@@ -83,11 +82,26 @@ public class FlashSaleController : ControllerBase
             });
         }
 
-        // Tạo đơn hàng (trừ kho thành công thì tạo đơn)
-        var order = await _orderService.CreateOrderAsync(request.ProductId, request.Quantity, clientId);
+        // Trừ kho atomic trên Redis (ngoài transaction DB)
+        var deductResult = await _inventoryService.DeductInventoryAsync(request.ProductId, request.Quantity);
+        if (!deductResult.IsSuccess)
+        {
+            return BadRequest(new
+            {
+                status = "error",
+                code = "INSUFFICIENT_INVENTORY",
+                message = $"Sản phẩm '{request.ProductId}' đã hết hàng (OverSelling). Không tạo đơn.",
+                remainingQuantity = deductResult.RemainingQuantity
+            });
+        }
+
+        // Tạo message tạo đơn (chưa lưu Order vào PostgreSQL tại API)
+        var orderId = Guid.NewGuid();
+        var orderCreatedMessage = OrderCreatedMessage.Create(
+            new Order(orderId, request.ProductId, request.Quantity, clientId),
+            orderId);
 
         // Publish message vào RabbitMQ Queue (OrderPipeline)
-        var orderCreatedMessage = OrderCreatedMessage.Create(order, order.Id);
         await _rabbitMqPublisherService.PublishOrderCreatedAsync(orderCreatedMessage);
 
         // Trả về HTTP 202 Accepted ngay (không chờ xử lý hoàn tất)
@@ -96,12 +110,12 @@ public class FlashSaleController : ControllerBase
             status = "success",
             code = "ORDER_ACCEPTED",
             message = "Đơn hàng đã được nhận và đang được xử lý.",
-            orderId = order.Id,
-            productId = order.ProductId,
-            quantity = order.Quantity,
-            clientId = order.ClientId,
-            orderStatus = order.OrderStatus,
-            createdOn = order.CreatedOn
+            orderId = orderId,
+            productId = request.ProductId,
+            quantity = request.Quantity,
+            clientId = clientId,
+            orderStatus = "Created",
+            createdOn = orderCreatedMessage.OccurredOn
         });
     }
 }
