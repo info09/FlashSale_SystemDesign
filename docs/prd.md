@@ -44,7 +44,7 @@ Mã FR dùng định dạng FR-XX, không thay đổi sau này để docs/archit
 
 [CẦN LÀM RÕ] Ngưỡng rate limit cụ thể là bao nhiêu request/giây per customer hay per IP (input chỉ nêu tổng thể 15.000 RPS spike, chưa chia nhỏ per client).
 
-[CẦN LÀM RÕ] Tên RabbitMQ Exchange/Queue và routing key cụ thể cho pipeline tạo đơn.
+[CẦN LÀM RÕ] Tên RabbitMQ Exchange/Queue và routing key cụ thể cho pipeline tạo đơn: **Đã chốt** — Exchange: `flash_sale_exchange`, Queue: `order_pipeline_queue`, Routing Key: `order.created` (xem docs/decisions.md).
 
 Cơ chế xác thực/đăng nhập của client khi gọi API: **ASP.NET Core Identity + Bearer Token (JWT)**. Client đăng nhập qua Identity để nhận Bearer Token, sau đó gửi token trong header `Authorization: Bearer <token>` cho mỗi request. API Gateway xác thực token trước khi kiểm tra RateLimit (FR-01, NFR-04).
 

@@ -75,7 +75,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 - [x] Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain
 - [x] Story 3.2 (Application): Tạo CreateOrderCommand, CreateOrderCommandHandler, OrderService, message contract OrderCreatedMessage (có CorrelationId, MessageId, OccurredOn, Payload) trong FlashSale.Application
-- [] Story 3.3 (Infrastructure): Cấu hình RabbitMQ Exchange/Queue/Routing Key (tên chốt trong docs/decisions.md, dùng thuật ngữ OrderPipeline, Queue, Message); triển khai RabbitMqPublisherService trong FlashSale.Infrastructure/ExternalServices/RabbitMQ/
+- [x] Story 3.3 (Infrastructure): Cấu hình RabbitMQ Exchange/Queue/Routing Key (tên chốt trong docs/decisions.md, dùng thuật ngữ OrderPipeline, Queue, Message); triển khai RabbitMqPublisherService trong FlashSale.Infrastructure/ExternalServices/RabbitMQ/
 - [] Story 3.4 (Api): Tạo FlashSaleController, endpoint mua hàng trả Http202Accepted ngay cho FlashSaleShopper sau khi đẩy Message vào Queue, không chờ xử lý xong
 - [] Story 3.5 (Test): Viết unit test cho OrderCreatedMessage và RabbitMqPublisherService (mock RabbitMQ)
 - [] Story 3.6 (Test): Viết integration test kiểm tra publish message vào RabbitMQ thật (Testcontainers)
@@ -136,6 +136,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 - Hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain
 - Hoàn thành Story 3.2 (Application): Tạo CreateOrderCommand, CreateOrderCommandHandler, OrderService, message contract OrderCreatedMessage (có CorrelationId, MessageId, OccurredOn, Payload) trong FlashSale.Application; đăng ký IOrderService, CreateOrderCommandValidator trong DependencyInjection.cs; build 0 error
+- Hoàn thành Story 3.3 (Infrastructure): Cấu hình RabbitMQ Exchange/Queue/Routing Key (Exchange: flash_sale_exchange, Queue: order_pipeline_queue, Routing Key: order.created, DLQ: order_pipeline_dlq); triển khai RabbitMqPublisherService trong FlashSale.Infrastructure/ExternalServices/RabbitMQ/; đăng ký IRabbitMqPublisherService trong DependencyInjection.cs; thêm package RabbitMQ.Client 6.6.0; build 0 error
 
 
 ## 4. Deferred Work (việc đã cố ý hoãn)

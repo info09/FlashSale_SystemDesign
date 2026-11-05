@@ -76,4 +76,21 @@ Quy tắc trạng thái:
 - **Đánh đổi/hệ quả (Trade-off):** Phải sửa `docs/conventions.md` mục 1.5 (ví dụ dùng snake_case) nếu muốn đồng nhất hoàn toàn; tên bảng PostgreSQL viết hoa chữ cái đầu (PostgreSQL lưu tên bảng case-insensitive nếu không bao nháy, nhưng EF Core sẽ quote khi cần).
 - **Trạng thái (Status):** Active
 
+### [2026-11-04] — Chọn tên RabbitMQ Exchange/Queue/Routing Key cho OrderPipeline
+
+- **Bối cảnh (Context):** Cần tên Exchange/Queue/Routing Key cụ thể cho pipeline tạo đơn (FR-03). Trước đây docs/prd.md đánh dấu đây là điểm [CẦN LÀM RÕ] (câu 2).
+- **Các lựa chọn đã xem xét (Options considered):** 
+  - Tên tùy chỉnh khác (ví dụ: `flash_sale_order_queue`, `flash_sale_order_exchange`)
+  - Tên theo chuẩn đã chốt (ví dụ: `flash_sale_exchange`, `order_pipeline_queue`, `order.created`)
+- **Quyết định (Decision):** Chọn tên sau:
+  - Exchange: `flash_sale_exchange`
+  - Queue: `order_pipeline_queue`
+  - Routing Key: `order.created`
+  - Dead Letter Queue: `order_pipeline_dlq`
+  - Dead Letter Exchange: `flash_sale_dlq_exchange`
+  - Dead Letter Routing Key: `order.dlq`
+- **Lý do (Rationale):** Tên phù hợp với thuật ngữ chuẩn trong docs/domain-glossary.md (RabbitMQ, Queue, OrderPipeline, Message), dễ hiểu và nhất quán với quy ước đặt tên của dự án.
+- **Đánh đổi/hệ quả (Trade-off):** Không có đánh đổi đáng kể, đây là quy ước đặt tên nội bộ.
+- **Trạng thái (Status):** Active
+
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.

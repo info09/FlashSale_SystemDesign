@@ -1,5 +1,8 @@
-﻿using FlashSale.Domain.Interfaces;
+﻿using FlashSale.Application.Features.Order.Commands;
+using FlashSale.Application.Interfaces;
+using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.Redis;
+using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using FlashSale.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +59,10 @@ public static class DependencyInjection
 
         // Đăng ký JwtTokenService (trien khai IJwtTokenService, ky JWT token cho Bearer authentication)
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+        // Đăng ký RabbitMqPublisherService (trien khai IRabbitMqPublisherService, publish OrderCreatedMessage vao Queue)
+        var rabbitMqConnectionString = configuration["RABBITMQ_CONNECTION_STRING"] ?? "amqp://guest:guest@localhost:5672/";
+        services.AddSingleton<IRabbitMqPublisherService>(_ => new RabbitMqPublisherService(rabbitMqConnectionString));
 
         return services;
     }
