@@ -1,5 +1,8 @@
 ﻿using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.Redis;
+using FlashSale.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
@@ -33,6 +36,23 @@ public static class DependencyInjection
         services.AddSingleton<IInventoryRepository>(_ => new RedisInventoryService(
             new RedisScriptExecutor(redisConnection.GetDatabase()),
             inventoryLuaScriptContent));
+
+        // Đăng ký PostgreSQLPrimaryContext (ghi Order + Outbox + User qua Identity)
+        var primaryConnectionString = configuration["POSTGRESQL_PRIMARY_CONNECTION_STRING"]
+            ?? "Host=localhost;Port=5432;Database=flashsale;Username=postgres;Password=postgres";
+        services.AddDbContext<PostgreSQLPrimaryContext>(options =>
+            options.UseNpgsql(primaryConnectionString));
+
+        // Đăng ký ASP.NET Core Identity voi ApplicationUser va IdentityRole<Guid>
+        services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<PostgreSQLPrimaryContext>()
+            .AddDefaultTokenProviders();
+
+        // Đăng ký UserRepository (trien khai IUserRepository)
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        // Đăng ký AuthService (trien khai IUserService, su dung UserManager + SignInManager cua Identity)
+        services.AddScoped<IUserService, AuthService>();
 
         return services;
     }

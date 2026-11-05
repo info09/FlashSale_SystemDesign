@@ -65,4 +65,15 @@ Quy tắc trạng thái:
 - **Đánh đổi/hệ quả (Trade-off):** Thêm phụ thuộc `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Microsoft.AspNetCore.Authentication.JwtBearer`; cần bảng Users trong PostgreSQLPrimary và migration mới; tăng độ phức tạp cho luồng đăng nhập trước khi mua hàng.
 - **Trạng thái (Status):** Active
 
+### [2026-11-04] — Chọn PascalCase cho tên bảng/cột Database
+
+- **Bối cảnh (Context):** `docs/conventions.md` mục 1.5 ban đầu khuyên dùng snake_case cho tên bảng/cột DB. Sau khi thảo luận, Đại ca yêu cầu đổi sang PascalCase cho tên bảng/cột trong PostgreSQLPrimary.
+- **Các lựa chọn đã xem xét (Options considered):** 
+  - snake_case (ví dụ: `user`, `user_name`, `role`, `normalized_user_name`): chuẩn ban đầu trong conventions.md, phù hợp với PostgreSQL cộng đồng.
+  - PascalCase (ví dụ: `User`, `UserName`, `Role`, `NormalizedUserName`): khớp với tên property C# entity, ít map hơn, dễ đọc hơn cho team .NET.
+- **Quyết định (Decision):** Chọn PascalCase cho tên bảng và tên cột trong PostgreSQLPrimary (`User`, `Role`, `UserName`, `Email`, v.v.). Xóa tất cả `HasColumnName(...)` trong `OnModelCreating`, EF Core sẽ dùng tên property làm tên cột mặc định.
+- **Lý do (Rationale):** Khớp với tên property C# entity (PascalCase), giảm thursday mapping, đồng nhất với convention đặt tên class/entity trong dự án.
+- **Đánh đổi/hệ quả (Trade-off):** Phải sửa `docs/conventions.md` mục 1.5 (ví dụ dùng snake_case) nếu muốn đồng nhất hoàn toàn; tên bảng PostgreSQL viết hoa chữ cái đầu (PostgreSQL lưu tên bảng case-insensitive nếu không bao nháy, nhưng EF Core sẽ quote khi cần).
+- **Trạng thái (Status):** Active
+
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.

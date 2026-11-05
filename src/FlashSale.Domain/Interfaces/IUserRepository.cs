@@ -3,7 +3,8 @@ using FlashSale.Domain.Entities;
 namespace FlashSale.Domain.Interfaces;
 
 /// <summary>
-/// Giao dinh dinh nghia thao tac truy cap User trong kho du lieu (PostgreSQLPrimary).
+/// Giao dinh dinh nghia thao tac truy cap User profile trong kho du lieu (PostgreSQLPrimary).
+/// Mat khau va xac thuc duoc ASP.NET Core Identity xu ly, khong luu trong Domain.
 /// O lop Domain chi dinh nghia contract, chua viet logic thuc thi.
 /// 
 /// Thuat ngua chuan theo docs/domain-glossary.md: User, IUserRepository.
@@ -22,7 +23,8 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Them User moi vao kho du lieu.
+    /// Them User profile moi (UserName, Email) vao kho du lieu.
+    /// Mat khau duoc luu boi ASP.NET Core Identity, khong o day.
     /// </summary>
     Task AddAsync(User user, CancellationToken cancellationToken = default);
 
