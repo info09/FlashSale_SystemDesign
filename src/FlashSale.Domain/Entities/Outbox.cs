@@ -48,6 +48,37 @@ public class Outbox
     }
 
     /// <summary>
+    /// Khoi tao mot ghi Outbox co Id chinh xac (dung khi load tu kho du lieu/PostgreSQLPrimary).
+    /// </summary>
+    public Outbox(Guid id, Guid orderId, string eventType, string payload, DateTimeOffset occurredOn, Guid correlationId, string processingStatus, int retryCount, DateTimeOffset? processedOn)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Id khong duoc trong", nameof(id));
+        if (orderId == Guid.Empty)
+            throw new ArgumentException("OrderId khong duoc trong", nameof(orderId));
+        if (string.IsNullOrWhiteSpace(eventType))
+            throw new ArgumentException("EventType khong duoc de trong", nameof(eventType));
+        if (string.IsNullOrWhiteSpace(payload))
+            throw new ArgumentException("Payload khong duoc de trong", nameof(payload));
+        if (string.IsNullOrWhiteSpace(processingStatus))
+            throw new ArgumentException("ProcessingStatus khong duoc de trong", nameof(processingStatus));
+        if (correlationId == Guid.Empty)
+            throw new ArgumentException("CorrelationId khong duoc trong", nameof(correlationId));
+        if (retryCount < 0)
+            throw new ArgumentException("RetryCount phai lon hon hoac bang 0", nameof(retryCount));
+
+        Id = id;
+        OrderId = orderId;
+        EventType = eventType;
+        Payload = payload;
+        OccurredOn = occurredOn;
+        CorrelationId = correlationId;
+        ProcessingStatus = processingStatus;
+        RetryCount = retryCount;
+        ProcessedOn = processedOn;
+    }
+
+    /// <summary>
     /// Danh dau da xu ly thanh cong (Public).
     /// </summary>
     public void MarkAsProcessed()
