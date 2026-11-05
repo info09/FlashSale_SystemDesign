@@ -67,6 +67,9 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Bat toan bo exception, tra JSON loi chuan (truyoc khi map endpoints)
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+
 // OpenAPI endpoint (Swagger JSON)
 app.UseSwagger();
 app.UseSwaggerUI(c =>

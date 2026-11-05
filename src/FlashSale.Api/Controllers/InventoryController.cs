@@ -1,5 +1,6 @@
 using FlashSale.Application.Features.Inventory.Commands;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
@@ -10,6 +11,7 @@ namespace FlashSale.Api.Controllers;
 /// Thuật ngữ chuẩn theo docs/domain-glossary.md: Inventory, AtomicInventoryOffloading, Product.
 /// Không được gọi là: StockController, TồnKhoController, KhoController.
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/v1/inventory")]
 [ApiExplorerSettings(GroupName = "v1")]

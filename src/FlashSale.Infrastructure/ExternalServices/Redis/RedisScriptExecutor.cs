@@ -20,17 +20,8 @@ public class RedisScriptExecutor : IRedisScriptExecutor
         var result = await _redis.ScriptEvaluateAsync(script, keys, args, flags: CommandFlags.None);
 
         // Lua script tra ve mang [allowed, remaining, resetAfter]. Chuyen thanh chuoi dang "allowed,remaining,resetAfter".
-        try
-        {
-            var array = (RedisResult[])result;
-            var values = array.Select(e => e.ToString()).ToArray();
-            return string.Join(",", values);
-        }
-        catch
-        {
-            return result.ToString();
-        }
-
-        return result.ToString();
+        var array = (RedisResult[])result;
+        var values = array.Select(e => e.ToString()).ToArray();
+        return string.Join(",", values);
     }
 }
