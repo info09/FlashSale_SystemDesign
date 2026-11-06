@@ -10,6 +10,7 @@ namespace FlashSale.Worker;
 /// Async Worker (.NET 8 Background Service) tieu thu message tu RabbitMQ Queue (order_pipeline_queue).
 /// Moi message duoc xu ly: tao Order + ghi Outbox trong cung 1 transaction PostgreSQLPrimary (Transactional Outbox Pattern).
 /// Trien khai Retry voi ExponentialBackoff (toi da 3 lan) khi xu ly message that bai.
+/// Sau 3 lan that bai, message duoc chuyen vao DeadLetterQueue (order_pipeline_dlq) (FR-05).
 /// 
 /// Thuat ngua chuan theo docs/domain-glossary.md: AsyncWorker, Queue, Message, Order, Outbox, PostgreSQLPrimary, TransactionalOutboxPattern, ExponentialBackoff, Retry, DeadLetterQueue.
 /// </summary>
@@ -58,44 +59,56 @@ public class Worker : BackgroundService
             var result = _channel.BasicGet(queue: RabbitMqConstants.QueueName, autoAck: false);
             if (result is not null)
             {
-                try
-                {
-                    var json = Encoding.UTF8.GetString(result.Body.ToArray());
-                    await _consumer.ProcessMessageAsync(json, stoppingToken);
-                    _channel.BasicAck(result.DeliveryTag, false);
-                }
-                catch (Exception ex)
-                {
-                    var retryCount = GetRetryCount(result.BasicProperties);
-
-                    if (_backoffPolicy.CanRetry(retryCount))
-                    {
-                        // Doi theo Exponential Backoff truoc khi gui lai message
-                        var delay = _backoffPolicy.GetDelay(retryCount);
-                        _logger.LogWarning(ex,
-                            "That bai xu ly message {MessageId}, thu lai lan {RetryCount} sau {Delay}ms.",
-                            result.BasicProperties?.MessageId, retryCount + 1, delay.TotalMilliseconds);
-                        await Task.Delay(delay, stoppingToken);
-
-                        // Gui lai message voi retry count tang len
-                        RepublishMessage(result.Body.ToArray(), result.BasicProperties, retryCount + 1);
-
-                        // Xoa message cu khoi queue (khong requeue, vi da gui lai tren)
-                        _channel.BasicNack(result.DeliveryTag, false, false);
-                    }
-                    else
-                    {
-                        // Vuot qua so lan thu lai toi da, gui den DLQ qua Dead Letter Exchange
-                        _logger.LogError(ex,
-                            "Message {MessageId} vuot qua {MaxRetryCount} lan thu lai, gui den DLQ.",
-                            result.BasicProperties?.MessageId, _backoffPolicy.MaxRetryCount);
-                        _channel.BasicNack(result.DeliveryTag, false, false);
-                    }
-                }
+                await HandleDeliveryAsync(result, stoppingToken);
             }
             else
             {
                 await Task.Delay(100, stoppingToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Xu ly mot delivery duoc lay tu Queue.
+    /// Neu xu ly thanh cong thi Ack. Neu that bai thi Retry (toi da 3 lan) hoac chuyen vao DeadLetterQueue.
+    /// </summary>
+    internal async Task HandleDeliveryAsync(BasicGetResult result, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var json = Encoding.UTF8.GetString(result.Body.ToArray());
+            await _consumer.ProcessMessageAsync(json, stoppingToken);
+            _channel.BasicAck(result.DeliveryTag, false);
+        }
+        catch (Exception ex)
+        {
+            var retryCount = GetRetryCount(result.BasicProperties);
+
+            if (_backoffPolicy.CanRetry(retryCount))
+            {
+                // Doi theo Exponential Backoff truoc khi gui lai message
+                var delay = _backoffPolicy.GetDelay(retryCount);
+                _logger.LogWarning(ex,
+                    "That bai xu ly message {MessageId}, thu lai lan {RetryCount} sau {Delay}ms.",
+                    result.BasicProperties?.MessageId, retryCount + 1, delay.TotalMilliseconds);
+                await Task.Delay(delay, stoppingToken);
+
+                // Gui lai message voi retry count tang len
+                RepublishMessage(result.Body.ToArray(), result.BasicProperties, retryCount + 1);
+
+                // Xoa message cu khoi queue (khong requeue, vi da gui lai tren)
+                _channel.BasicNack(result.DeliveryTag, false, false);
+            }
+            else
+            {
+                // Vuot qua so lan thu lai toi da, chuyen message vao DeadLetterQueue (FR-05)
+                _logger.LogError(ex,
+                    "Message {MessageId} vuot qua {MaxRetryCount} lan thu lai, chuyen vao DeadLetterQueue {DeadLetterQueueName}.",
+                    result.BasicProperties?.MessageId, _backoffPolicy.MaxRetryCount, RabbitMqConstants.DeadLetterQueueName);
+                MoveToDeadLetterQueue(result.Body.ToArray(), result.BasicProperties);
+
+                // Ack de xoa message khoi Queue chinh (da luu luu vao DLQ)
+                _channel.BasicAck(result.DeliveryTag, false);
             }
         }
     }
@@ -145,6 +158,34 @@ public class Worker : BackgroundService
         _channel.BasicPublish(
             exchange: RabbitMqConstants.ExchangeName,
             routingKey: RabbitMqConstants.RoutingKey,
+            mandatory: false,
+            basicProperties: newProps,
+            body: body);
+    }
+
+    /// <summary>
+    /// Chuyen message vao DeadLetterQueue qua DeadLetterExchange (flash_sale_dlq_exchange, routing key order.dlq).
+    /// </summary>
+    private void MoveToDeadLetterQueue(byte[] body, IBasicProperties? properties)
+    {
+        var newProps = _channel.CreateBasicProperties();
+        newProps.Persistent = properties?.Persistent ?? true;
+        newProps.ContentType = properties?.ContentType ?? "application/json";
+        newProps.CorrelationId = properties?.CorrelationId;
+        newProps.MessageId = properties?.MessageId;
+
+        var headers = new Dictionary<string, object>();
+        if (properties?.Headers != null)
+        {
+            foreach (var kvp in properties.Headers)
+                headers[kvp.Key] = kvp.Value;
+        }
+        headers[RetryCountHeader] = GetRetryCount(properties);
+        newProps.Headers = headers;
+
+        _channel.BasicPublish(
+            exchange: RabbitMqConstants.DeadLetterExchangeName,
+            routingKey: RabbitMqConstants.DeadLetterRoutingKey,
             mandatory: false,
             basicProperties: newProps,
             body: body);
