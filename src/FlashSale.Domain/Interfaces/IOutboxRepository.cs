@@ -30,4 +30,12 @@ public interface IOutboxRepository
     /// Cap nhat trang thai xu ly cua mot ghi Outbox.
     /// </summary>
     Task UpdateAsync(Outbox outbox, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Xoa (purge) cac ghi Outbox da duoc xu ly (Published/Failed) va cu hon ngaysinh quy dinh, de tranh bang Outbox lon dan theo thoi gian.
+    /// Tra ve so luong ghi da duoc xoa.
+    /// </summary>
+    /// <param name="olderThan">Xoa cac ghi co OccurredOn som hon ngay thang nay.</param>
+    /// <param name="cancellationToken">Token huy bo thao tac bat dong bo.</param>
+    Task<int> PurgeProcessedOutboxesOlderThanAsync(DateTimeOffset olderThan, CancellationToken cancellationToken = default);
 }

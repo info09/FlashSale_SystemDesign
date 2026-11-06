@@ -104,4 +104,16 @@ Quy tắc trạng thái:
 - **Đánh đổi/hệ quả (Trade-off):** Không có đánh đổi đáng kể, đây là quy ước đặt tên nội bộ.
 - **Trạng thái (Status):** Active
 
+### [2026-11-06] — Xác định thời gian purge/archive bảng Outbox (OutboxPurgeDays)
+
+- **Bối cảnh (Context):** Bảng Outbox trong PostgreSQLPrimary dần lớn theo thời gian nếu không có cơ chế purge (liên quan NFR-06, Story 4.13). Cần xác định thời gian lưu trữ trước khi purge/archive để tránh bảng lớn dần.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - Không purge: bảng Outbox vo hạn lớn, ảnh hưởng đến hiệu năng và chi phí lưu trữ.
+  - Purge tất cả Outbox sau PurgeDays (bao gồm chưa/Pending): nguy cơ xóa sự kiện chưa xử lý, làm mất dữ liệu, vi phạm NFR-06.
+  - Purge chỉ ghi đã xử lý (Published/Failed) và cũ hơn PurgeDays: an toàn, giữ lại sự kiện chưa xử lý để xử lý lại, đồng hồ NFR-06.
+- **Quyết định (Decision):** Chọn lựa chọn ba: purge chỉ các ghi Outbox có ProcessingStatus = Published hoặc Failed và OccurredOn cũ hơn Outbox:PurgeDays (mặc định 30 ngày), trả về số lượng đã xóa. Thông số được đọc từ appanalysis/biến môi trường OUTBOX_PURGE_DAYS.
+- **Lý do (Rationale):** Đảm bảo không xóa sự kiện chưa xử lý (Pending), đồng hồ với NFR-06 (không mất đơn 202 Accepted), và tránh bảng Outbox lớn dần. Purge thực hiện qua IOutboxRepository.PurgeProcessedOutboxesOlderThanAsync (EF Core ExecuteDeleteAsync) và IOutboxPurgeService orchestrator.
+- **Đánh đổi/hệ quả (Trade-off):** Cần một bộ dịch vụ/Worker chạy purge định kỳ (có thể thêm ở story sau). Nếu PurgeDays quá ngắn, có thể xóa sự kiện chưa được DevOps xem/replay DLQ.
+- **Trạng thái (Status):** Active
+
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.

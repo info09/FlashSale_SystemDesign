@@ -8,7 +8,9 @@ using FlashSale.Application.Features.RateLimit.Validators;
 using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
 using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FlashSale.Application;
 
@@ -17,7 +19,7 @@ namespace FlashSale.Application;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
     {
         // Đăng ký RateLimitService
         services.AddScoped<IRateLimitService, RateLimitService>();
@@ -36,6 +38,12 @@ public static class DependencyInjection
 
         // Đăng ký OutboxPublisher (xuat phat su kien tu Outbox ra RabbitMQ Queue)
         services.AddScoped<IOutboxPublisher, OutboxPublisher>();
+
+        // Đăng ký OutboxPurgeService + cau hinh thoi gian purge/archive bang Outbox (NFR-06)
+        var purgeDaysStr = configuration["Outbox:PurgeDays"] ?? "30";
+        var purgeDays = int.TryParse(purgeDaysStr, out var parsed) ? parsed : 30;
+        services.Configure<OutboxPurgeOptions>(o => o.PurgeDays = purgeDays);
+        services.AddScoped<IOutboxPurgeService, OutboxPurgeService>();
 
         // Đăng ký ReconciliationService (doi chieu du lieu, NFR-06)
         services.AddScoped<IReconciliationService, ReconciliationService>();

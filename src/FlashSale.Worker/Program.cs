@@ -17,7 +17,7 @@ public class Program
         builder.Services.AddInfrastructure(builder.Configuration);
 
         // Đăng ký Application (IOrderService, IOutboxService, IOutboxPublisher, validators)
-        builder.Services.AddApplication();
+        builder.Services.AddApplication(builder.Configuration);
 
         // RabbitMQ connection & channel (singleton, cung nhom voi ApiGateway)
         var rabbitMqConnectionString = builder.Configuration["RABBITMQ_CONNECTION_STRING"]
@@ -42,3 +42,4 @@ public class Program
         host.Run();
     }
 }
+

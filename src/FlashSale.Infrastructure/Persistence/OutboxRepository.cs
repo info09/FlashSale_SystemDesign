@@ -51,4 +51,12 @@ public class OutboxRepository : IOutboxRepository
     {
         _context.Outboxes.Update(outbox);
     }
+
+    public async Task<int> PurgeProcessedOutboxesOlderThanAsync(DateTimeOffset olderThan, CancellationToken cancellationToken = default)
+    {
+        return await _context.Outboxes
+            .Where(o => (o.ProcessingStatus == "Published" || o.ProcessingStatus == "Failed")
+                && o.OccurredOn < olderThan)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 }
