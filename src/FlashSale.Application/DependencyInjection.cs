@@ -37,6 +37,9 @@ public static class DependencyInjection
         // Đăng ký OutboxPublisher (xuat phat su kien tu Outbox ra RabbitMQ Queue)
         services.AddScoped<IOutboxPublisher, OutboxPublisher>();
 
+        // Đăng ký ExponentialBackoffPolicy (Retry voi backoff tang dan cho Worker)
+        services.AddSingleton<ExponentialBackoffPolicy>();
+
         // Đăng ký Validators
         services.AddSingleton<IValidator<RateLimitCommand>, RateLimitCommandValidator>();
         services.AddSingleton<IValidator<DeductInventoryCommand>, DeductInventoryCommandValidator>();
