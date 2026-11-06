@@ -76,6 +76,17 @@ Quy tắc trạng thái:
 - **Đánh đổi/hệ quả (Trade-off):** Phải sửa `docs/conventions.md` mục 1.5 (ví dụ dùng snake_case) nếu muốn đồng nhất hoàn toàn; tên bảng PostgreSQL viết hoa chữ cái đầu (PostgreSQL lưu tên bảng case-insensitive nếu không bao nháy, nhưng EF Core sẽ quote khi cần).
 - **Trạng thái (Status):** Active
 
+### [2026-11-05] — Chọn RabbitMQ.Client trực tiếp thay MassTransit cho Worker consumer
+
+- **Bối cảnh (Context):** Convention 3.13 khuyên dùng MassTransit cho RabbitMQ consumer/producer. Nhưng đã implement `RabbitMqPublisherService` (story 3.3) và `OrderCreatedConsumerService` (story 4.5) dùng `RabbitMQ.Client` trực tiếp, đơn giản, ít phụ thuộc NuGet, phù hợp MVP.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - MassTransit + `IConsumer<T>`: phức tạp hơn, cần thêm package `MassTransit`, `MassTransit.RabbitMQ`, cấu hình bus, host, endpoint.
+  - `RabbitMQ.Client` trực tiếp (`BasicGet`/`BasicPublish`): đơn giản, kiểm soát rõ luồng ack/nack, ít phụ thuộc.
+- **Quyết định (Decision):** Chọn `RabbitMQ.Client` trực tiếp cho cả publisher và consumer trong Phase 4 MVP.
+- **Lý do (Rationale):** Giảm độ phức tạp, ít package, triển khai nhanh, đủ đáp ứng FR-03, FR-04, FR-05, NFR-06 cho MVP. Có thể chuyển sang MassTransit sau khi scale.
+- **Đánh đổi/hệ quả (Trade-off):** Không có tính năng tự động retry/reconnect cao cấp của MassTransit, phải tự xử lý ack/nack và reconnect trong Worker loop. Có thể vi phạm convention 3.13 nếu không ghi quyết định này.
+- **Trạng thái (Status):** Active
+
 ### [2026-11-04] — Chọn tên RabbitMQ Exchange/Queue/Routing Key cho OrderPipeline
 
 - **Bối cảnh (Context):** Cần tên Exchange/Queue/Routing Key cụ thể cho pipeline tạo đơn (FR-03). Trước đây docs/prd.md đánh dấu đây là điểm [CẦN LÀM RÕ] (câu 2).
