@@ -93,7 +93,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 4.8 (Worker): Triển khai chuyển Message vào DeadLetterQueue sau 3 lần thử vẫn lỗi (FR-05)
 - [x] Story 4.9 (Test): Viết unit test cho OrderService (mock PostgreSQLPrimary, mock OutboxRepository)
 - [x] Story 4.10 (Test): Viết integration test kiểm tra ghi Order + Outbox trong 1 transaction PostgreSQL thật (Testcontainers)
-- [] Story 4.11 (Test): Viết e2e test kiểm tra luồng đầy đủ: ApiGateway → RabbitMQ → AsyncWorker → PostgreSQLPrimary + Outbox
+- [x] Story 4.11 (Test): Viết e2e test kiểm tra luồng đầy đủ: ApiGateway → RabbitMQ → AsyncWorker → PostgreSQLPrimary + Outbox
 - [] Story 4.12 (Reliability): Viết reconciliation script/process để đối chiếu 100% đơn 202 Accepted đã có bản ghi trong PostgreSQLPrimary (NFR-06)
 - [] Story 4.13 (Config): Định nghĩa thời gian purge/archive bảng Outbox ([CẦN LÀM RÕ] trong docs/prd.md Câu 5)
 
@@ -130,8 +130,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 4 - Async Worker & Transactional Outbox (FR-04, FR-05, NFR-06)
-- **Story đang làm:** Story 4.10 - Viết integration test kiểm tra ghi Order + Outbox trong 1 transaction PostgreSQL thật (Testcontainers)
-- **Lần cập nhật gần nhất:** Hoàn thành Story 4.10 (Test): Viết integration test OrderOutboxTransactionIntegrationTest (2 case) kiểm tra ghi Order + Outbox trong cung 1 transaction PostgreSQLPrimary thuc su qua IUnitOfWork + OrderRepository + OutboxRepository (Transactional Outbox Pattern, FR-04, NFR-06) voi Testcontainers PostgreSQL: OrderAndOutbox_ShouldBeSavedInSameTransaction_WhenCommit va Rollback_ShouldNotPersistOrderAndOutbox_WhenException; ca 2 case pass; FlashSale.Infrastructure.Tests 44/44 pass; build 0 error.
+- **Story đang làm:** Story 4.11 - Viết e2e test kiểm tra luồng đầy đủ: ApiGateway → RabbitMQ → AsyncWorker → PostgreSQLPrimary + Outbox (FR-04, NFR-06)
+- **Lần cập nhật gần nhất:** Hoàn thành Story 4.11 (Test): Them case GivenEnoughInventory_WhenBuy_ShouldCreateOrderAndOutboxInPostgreSQL vao FlashSaleBuyEndToEndTest (3 case e2e pass) kiem tra luong day du ApiGateway → RabbitMQ → AsyncWorker → PostgreSQLPrimary + Outbox: API tra ve 202 Accepted, Worker luu Order + Outbox trong cung 1 transaction, 100% don 202 Accepted co ban ghi Outbox tuong ung (NFR-06 Data Consistency); FlashSaleBuyEndToEndTest 3/3 pass; build 0 error.
 - **Sửa lỗi JWT:** RateLimitMiddleware IsAuthenticated=false do ValidIssuer/ValidAudience=null (builder.Configuration không có AddInMemoryCollection từ WebApplicationFactory) → thêm fallback ?? "FlashSale.Api" / ?? "FlashSale.Client"; build 0 error
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain

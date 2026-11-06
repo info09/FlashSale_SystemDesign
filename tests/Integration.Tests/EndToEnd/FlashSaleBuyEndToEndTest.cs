@@ -2,9 +2,11 @@ using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using FlashSale.Infrastructure.Persistence;
 using FlashSale.Worker.Consumers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -242,6 +244,97 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GivenEnoughInventory_WhenBuy_ShouldCreateOrderAndOutboxInPostgreSQL()
+    {
+        // Arrange
+        var userName = $"buyoutbox_{Guid.NewGuid():N}";
+        var factory = CreateFactory();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var inventoryRepository = scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
+            await inventoryRepository.SetInventoryAsync("product-3", 100);
+        }
+
+        PurgeQueue();
+
+        var token = await RegisterAndGetToken(factory, userName, $"{userName}@example.com", "Password123!");
+
+        using var client = factory.CreateClient();
+        var request = new
+        {
+            ProductId = "product-3",
+            Quantity = 5
+        };
+        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+
+        // Act: API tra ve 202 Accepted
+        var response = await client.PostAsync("/api/v1/flash-sale/buy", content);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        // Publish OrderCreatedMessage vao Queue (simulate publisher da verify o Story 3.6/3.7)
+        var factoryMq = new ConnectionFactory
+        {
+            Uri = new Uri(_rabbitMqContainer.GetConnectionString()),
+            AutomaticRecoveryEnabled = false
+        };
+        using var connectionMq = factoryMq.CreateConnection();
+        using var channelMq = connectionMq.CreateModel();
+        channelMq.ExchangeDeclare(exchange: RabbitMqConstants.ExchangeName, type: ExchangeType.Direct, durable: true, autoDelete: false);
+        channelMq.QueueBind(queue: RabbitMqConstants.QueueName, exchange: RabbitMqConstants.ExchangeName, routingKey: RabbitMqConstants.RoutingKey);
+
+        var correlationId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var testMessage = new OrderCreatedMessage
+        {
+            CorrelationId = correlationId,
+            MessageId = messageId,
+            OccurredOn = DateTimeOffset.UtcNow,
+            Payload = new { orderId = Guid.NewGuid(), productId = "product-3", quantity = 5, clientId = userName, orderStatus = "Created", createdOn = DateTimeOffset.UtcNow }
+        };
+        var bodyBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(testMessage));
+        channelMq.BasicPublish(exchange: RabbitMqConstants.ExchangeName, routingKey: RabbitMqConstants.RoutingKey, mandatory: false, basicProperties: null, body: bodyBytes);
+
+        var result = WaitForMessage(channelMq, RabbitMqConstants.QueueName, TimeSpan.FromSeconds(5));
+        result.Should().NotBeNull();
+        var bodyJson = Encoding.UTF8.GetString(result.Value.Body.ToArray());
+        var bodyDoc = JsonDocument.Parse(bodyJson);
+        var orderIdFromMessage = Guid.Parse(bodyDoc.RootElement.GetProperty("Payload").GetProperty("orderId").GetString()!);
+        var correlationIdFromMessage = Guid.Parse(bodyDoc.RootElement.GetProperty("CorrelationId").GetString()!);
+
+        // Async Worker xu ly message (simulate Worker consume): luu Order + Outbox trong cung 1 transaction
+        using (var scope = factory.Services.CreateScope())
+        {
+            var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            var outboxService = scope.ServiceProvider.GetRequiredService<IOutboxService>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<OrderCreatedConsumerService>>();
+            var consumer = new OrderCreatedConsumerService(orderRepository, outboxService, unitOfWork, logger);
+
+            await consumer.ProcessMessageAsync(bodyJson, CancellationToken.None);
+
+            // Assert: Order luu vao PostgreSQLPrimary
+            var order = await orderRepository.GetByIdAsync(orderIdFromMessage);
+            order.Should().NotBeNull();
+            order!.ProductId.Should().Be("product-3");
+            order.Quantity.Should().Be(5);
+            order.ClientId.Should().NotBeNullOrWhiteSpace();
+            order.OrderStatus.Should().Be("Created");
+
+            // Assert: Outbox duoc luu trong cung transaction voi Order (NFR-06 Data Consistency)
+            var context = scope.ServiceProvider.GetRequiredService<PostgreSQLPrimaryContext>();
+            var outbox = await context.Outboxes
+                .FirstOrDefaultAsync(o => o.CorrelationId == correlationIdFromMessage);
+            outbox.Should().NotBeNull("100% don 202 Accepted phai co ban ghi Outbox tuong ung");
+            outbox!.OrderId.Should().Be(orderIdFromMessage);
+            outbox.EventType.Should().Be("OrderProcessed");
+            outbox.ProcessingStatus.Should().Be("Pending");
+            outbox.RetryCount.Should().Be(0);
+        }
+    }
+
+    [Fact]
     public async Task GivenNotEnoughInventory_WhenBuy_ShouldReturn400AndNotCreateOrder()
     {
         // Arrange
@@ -276,3 +369,4 @@ public class FlashSaleBuyEndToEndTest : IAsyncLifetime
         body.Should().Contain("đã hết hàng");
     }
 }
+
