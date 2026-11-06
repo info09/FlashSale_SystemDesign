@@ -111,9 +111,22 @@ Quy tắc trạng thái:
   - Không purge: bảng Outbox vo hạn lớn, ảnh hưởng đến hiệu năng và chi phí lưu trữ.
   - Purge tất cả Outbox sau PurgeDays (bao gồm chưa/Pending): nguy cơ xóa sự kiện chưa xử lý, làm mất dữ liệu, vi phạm NFR-06.
   - Purge chỉ ghi đã xử lý (Published/Failed) và cũ hơn PurgeDays: an toàn, giữ lại sự kiện chưa xử lý để xử lý lại, đồng hồ NFR-06.
-- **Quyết định (Decision):** Chọn lựa chọn ba: purge chỉ các ghi Outbox có ProcessingStatus = Published hoặc Failed và OccurredOn cũ hơn Outbox:PurgeDays (mặc định 30 ngày), trả về số lượng đã xóa. Thông số được đọc từ appanalysis/biến môi trường OUTBOX_PURGE_DAYS.
+- **Quyết định (Decision):** Chọn lựa chọn ba: purge chỉ các ghi Outbox có ProcessingStatus = Published hoặc Failed và OccurredOn cũ hơn Outbox:PurgeDays (mặc định 30 ngày), trả về số lượng đã xóa. Thông số được đọc từ appsettings/biến môi trường OUTBOX_PURGE_DAYS.
 - **Lý do (Rationale):** Đảm bảo không xóa sự kiện chưa xử lý (Pending), đồng hồ với NFR-06 (không mất đơn 202 Accepted), và tránh bảng Outbox lớn dần. Purge thực hiện qua IOutboxRepository.PurgeProcessedOutboxesOlderThanAsync (EF Core ExecuteDeleteAsync) và IOutboxPurgeService orchestrator.
 - **Đánh đổi/hệ quả (Trade-off):** Cần một bộ dịch vụ/Worker chạy purge định kỳ (có thể thêm ở story sau). Nếu PurgeDays quá ngắn, có thể xóa sự kiện chưa được DevOps xem/replay DLQ.
 - **Trạng thái (Status):** Active
 
 Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con để dễ tra cứu và link tới.
+
+### [2026-11-06] — Cach chay purge Outbox (tuy chon 3: BackgroundService + API endpoint)
+
+- **Boi canh (Context):** Ham purge Outbox da duoc viet (Story 4.13) nhung chua co mechanism chay tu dong hay kich hoat thu cong. Can xac dinh cach chay de DevOps co the quan ly bang Outbox (NFR-06).
+- **Cac lua chua da xem xuat (Options considered):**
+  - Chua BackgroundService chay tu dong moi 24 gio: tu dong, khong can can thiep, nhung khong co cach kich hoat ngay khi can.
+  - Chua API endpoint goi thu cong: co chinh sua chinh xac, nhung phai nho nguoi goi, de bi bo qua.
+  - Ca hai: BackgroundService tu dong moi 24 gio + API endpoint POST /api/v1/outbox/purge (bao ve [Authorize]) de DevOps kich hoat thu cong khi can.
+- **Quyet dinh (Decision):** Chon lua chua ba: dang ky OutboxPurgeWorkerService la AddHostedService chay purge moi 24 gio, va them OutboxController co endpoint POST /api/v1/outbox/purge bao ve bang [Authorize] de DevOps kich hoat thu cong.
+- **Ly do (Rationale):** Dat dung tu dong (tranh bo qua) va cung co the can thiep thu cong khi can (vi du sau khi xay ra su co, can purge ngay). API endpoint bao ve [Authorize] dam bao chi DevOps co token duoc goi (NFR-04).
+- **Danh doi/he quy (Trade-off):** Can luu luong PurgeDays (mac dinh 30 ngay) phu hop; neu qua ngan co the xoa su kien chua duoc xem/replay. BackgroundService chay trong FlashSale.Worker (cung nguyen vien voi PostgreSQLPrimary).
+- **Trang thai (Status):** Active
+

@@ -1,6 +1,7 @@
 using FlashSale.Application;
 using FlashSale.Infrastructure;
 using FlashSale.Worker.Consumers;
+using FlashSale.Worker.Services;
 using RabbitMQ.Client;
 
 namespace FlashSale.Worker;
@@ -38,8 +39,12 @@ public class Program
         // Background Service
         builder.Services.AddHostedService<Worker>();
 
+        // Background Service purge/archive bang Outbox dinh ky (moi 24 gio mot lan, NFR-06)
+        builder.Services.AddHostedService<OutboxPurgeWorkerService>();
+
         var host = builder.Build();
         host.Run();
     }
 }
+
 
