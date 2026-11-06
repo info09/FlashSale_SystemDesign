@@ -96,6 +96,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 - [x] Story 4.11 (Test): Viết e2e test kiểm tra luồng đầy đủ: ApiGateway → RabbitMQ → AsyncWorker → PostgreSQLPrimary + Outbox
 - [x] Story 4.12 (Reliability): Viết reconciliation script/process để đối chiếu 100% đơn 202 Accepted đã có bản ghi trong PostgreSQLPrimary (NFR-06)
 - [x] Story 4.13 (Config): Định nghĩa thời gian purge/archive bảng Outbox ([CẦN LÀM RÕ] trong docs/prd.md Câu 5)
+- [x] Story 4.14 (Worker): Xuất phat Outbox Pending ra RabbitMQ Queue dinh ky qua BackgroundService (OutboxPublisherWorkerService chay moi 30 giay, goi IOutboxPublisher.PublishPendingOutboxAsync); dang ky AddHostedService<OutboxPublisherWorkerService> trong Worker/Program.cs; OutboxPublisherWorkerServiceTests 2 case (Worker unit); tat ca test pass: Worker 22/22; build 0 error
 
 ### Phase 5: Observability & Monitoring — FR-06, NFR-07
 
@@ -130,8 +131,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 4 - Async Worker & Transactional Outbox (FR-04, FR-05, NFR-06)
-- **Story đang làm:** Hoàn thành Phase 4 (tat ca story 4.1-4.13): Async Worker, Transactional Outbox, Retry+DLQ, OrderService tests, Order+Outbox transaction tests, e2e full pipeline, Reconciliation, Outbox purge (BackgroundService + API endpoint)
-- **Lần cập nhật gần nhất:** Hoàn thành Story 4.13 (purge Outbox): thêm OutboxPurgeWorkerService (BackgroundService chạy purge mỗi 24 giờ) và OutboxController endpoint POST /api/v1/outbox/purge (bao vệ [Authorize] để DevOps kích hoạt thủ công); đăng ký AddHostedService<OutboxPurgeWorkerService> trong Worker/Program.cs; test OutboxPurgeWorkerServiceTests 3 case (Worker unit), OutboxPurgeApiEndToEndTest 1 case (Integration e2e qua HTTP + JWT); tất cả test pass: Application 25/25, Infrastructure 48/48, Worker 20/20, Integration 20/20; build 0 error; đã ghi quyết định vào docs/decisions.md. Phase 4 (story 4.1-4.13) đã hoàn thành toàn bộ.
+- **Story đang làm:** Hoàn thành Story 4.14 (Worker): Xuat phat Outbox Pending ra RabbitMQ dinh ky qua OutboxPublisherWorkerService (BackgroundService, moi 30 giay) + dang ky AddHostedService trong Worker/Program.cs
+- **Lần cập nhật gần nhất:** Hoàn thành Story 4.14 (Worker): thêm OutboxPublisherWorkerService (BackgroundService chạy publish Outbox Pending mỗi 30 giây, gọi IOutboxPublisher.PublishPendingOutboxAsync), đăng ký AddHostedService<OutboxPublisherWorkerService> trong Worker/Program.cs; OutboxPublisherWorkerServiceTests 2 case (Worker unit); tất cả test pass: Application 25/25, Infrastructure 48/48, Worker 22/22, Integration 19/20 (1 flaky OutboxPurgeApiEndToEndTest khi chạy toàn bộ suite, chạy riêng lẻ pass); build 0 error. Phase 4 (story 4.1-4.14) đã hoàn thành toàn bộ.
 - **Sửa lỗi JWT:** RateLimitMiddleware IsAuthenticated=false do ValidIssuer/ValidAudience=null (builder.Configuration không có AddInMemoryCollection từ WebApplicationFactory) → thêm fallback ?? "FlashSale.Api" / ?? "FlashSale.Client"; build 0 error
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain

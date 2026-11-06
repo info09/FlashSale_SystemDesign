@@ -130,3 +130,15 @@ Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con �
 - **Danh doi/he quy (Trade-off):** Can luu luong PurgeDays (mac dinh 30 ngay) phu hop; neu qua ngan co the xoa su kien chua duoc xem/replay. BackgroundService chay trong FlashSale.Worker (cung nguyen vien voi PostgreSQLPrimary).
 - **Trang thai (Status):** Active
 
+### [2026-11-06] — Chay xuat phat Outbox Pending dinh ky (OutboxPublisherWorkerService)
+
+- **Boi canh (Context):** Sau Story 4.5, OrderCreatedConsumerService chi ghi Order + Outbox (status Pending) vao PostgreSQLPrimary, chua co mechanism xuat phat cac ghi Outbox Pending ra RabbitMQ Queue (OrderPipeline). Can them BackgroundService de dam bao 100% su kien da luu duoc xuat phat (NFR-06, FR-04).
+- **Cac lua chua da xem xuat (Options considered):**
+  - Khong chay tu dong: Outbox Pending vo han, su kien khong bao gio duoc xuat phat ra Queue, lam mat du lieu, vi pham NFR-06.
+  - Chay publish trong OrderCreatedConsumerService cung luc: lam tang phuc tap va gay block luong xu ly message chinh, tac dong den p99 latency (NFR-01).
+  - BackgroundService OutboxPublisherWorkerService goi IOutboxPublisher.PublishPendingOutboxAsync dinh ky (moi 30 giay): tach roi rang, khong block luong chinh, dam bao su kien duoc xuat phat sau khoang thoi gian ngan.
+- **Quyet dinh (Decision):** Chon lua chua ba: dang ky OutboxPublisherWorkerService la AddHostedService trong FlashSale.Worker, chay publish moi 30 giay, goi IOutboxPublisher.PublishPendingOutboxAsync (lay Outbox Pending, publish ra RabbitMQ, danh dau Published/Failed).
+- **Ly do (Rationale):** Tach roi rang cong viec xu ly message chinh (Worker) va cong viec publish Outbox (BackgroundService), khong tac dong den p99 latency cua luong nhan don (NFR-01), van dam bao su kien duoc xuat phat (NFR-06).
+- **Danh doi/he quy (Trade-off):** Co khoang tho gian tre it it (toi da 30 giay) giua khi Order duoc ghi va khi Outbox duoc publish ra Queue. Neu can publish ngay lap tuc, co the giam interval hoac goi ngay trong OrderCreatedConsumerService.
+- **Trang thai (Status):** Active
+

@@ -42,6 +42,9 @@ public class Program
         // Background Service purge/archive bang Outbox dinh ky (moi 24 gio mot lan, NFR-06)
         builder.Services.AddHostedService<OutboxPurgeWorkerService>();
 
+        // Background Service xuat phat Outbox Pending ra RabbitMQ dinh ky (moi 30 giay mot lan, FR-04, NFR-06)
+        builder.Services.AddHostedService<OutboxPublisherWorkerService>();
+
         var host = builder.Build();
         host.Run();
     }
