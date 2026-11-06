@@ -37,6 +37,9 @@ public static class DependencyInjection
         // Đăng ký OutboxPublisher (xuat phat su kien tu Outbox ra RabbitMQ Queue)
         services.AddScoped<IOutboxPublisher, OutboxPublisher>();
 
+        // Đăng ký ReconciliationService (doi chieu du lieu, NFR-06)
+        services.AddScoped<IReconciliationService, ReconciliationService>();
+
         // Đăng ký ExponentialBackoffPolicy (Retry voi backoff tang dan cho Worker)
         services.AddSingleton<ExponentialBackoffPolicy>();
 
