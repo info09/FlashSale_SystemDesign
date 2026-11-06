@@ -20,9 +20,11 @@ public static class DependencyInjection
         var rateLimitLuaScriptContent = GetRateLimitLuaScriptContent();
         var inventoryLuaScriptContent = GetInventoryLuaScriptContent();
 
-        // Đăng ký Redis connection
+        // Đăng ký Redis connection (AbortOnConnectFail = false de Worker co the khoi dong va retry ket noi neu Redis chua san sang)
         var redisConnectionString = configuration["REDIS_CONNECTION_STRING"] ?? "localhost:6379";
-        var redisConnection = ConnectionMultiplexer.ConnectAsync(redisConnectionString).GetAwaiter().GetResult();
+        var config = ConfigurationOptions.Parse(redisConnectionString);
+        config.AbortOnConnectFail = false;
+        var redisConnection = ConnectionMultiplexer.Connect(config);
         services.AddSingleton(redisConnection);
 
         // Đăng ký Lua script executor

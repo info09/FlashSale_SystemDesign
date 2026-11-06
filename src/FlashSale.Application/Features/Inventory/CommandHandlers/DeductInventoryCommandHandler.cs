@@ -10,17 +10,15 @@ namespace FlashSale.Application.Features.Inventory.CommandHandlers;
 /// </summary>
 public class DeductInventoryCommandHandler : IRequestHandler<DeductInventoryCommand, DeductInventoryResult>
 {
-    private readonly IOrderService _orderService;
+    private readonly IInventoryService _inventoryService;
 
-    public DeductInventoryCommandHandler(IOrderService orderService)
+    public DeductInventoryCommandHandler(IInventoryService inventoryService)
     {
-        _orderService = orderService;
+        _inventoryService = inventoryService;
     }
 
     public async Task<DeductInventoryResult> Handle(DeductInventoryCommand request, CancellationToken cancellationToken)
     {
-        var result = await _orderService.CreateOrderAsync(request.ProductId, request.Quantity, request.ClientId, cancellationToken);
-
-        return new DeductInventoryResult(result.Id, result.OrderStatus, result.CreatedOn);
+        return await _inventoryService.DeductInventoryAsync(request.ProductId, request.QuantityToDeduct, cancellationToken);
     }
 }

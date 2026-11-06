@@ -15,9 +15,9 @@ public class DeductInventoryCommandValidator : AbstractValidator<DeductInventory
             .NotEmpty()
             .WithMessage("ProductId không được để trống");
 
-        RuleFor(x => x.Quantity)
+        RuleFor(x => x.QuantityToDeduct)
             .GreaterThan(0)
-            .WithMessage("Quantity phải lớn hơn 0");
+            .WithMessage("QuantityToDeduct phải lớn hơn 0");
 
         RuleFor(x => x.ClientId)
             .NotEmpty()

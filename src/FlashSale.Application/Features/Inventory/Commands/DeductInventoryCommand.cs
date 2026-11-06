@@ -6,9 +6,9 @@ namespace FlashSale.Application.Features.Inventory.Commands;
 /// Command yêu cầu trừ kho (AtomicInventoryOffloading) cho một sản phẩm.
 /// Thuật ngữ chuẩn theo docs/domain-glossary.md: Inventory, AtomicInventoryOffloading, Product.
 /// </summary>
-public record DeductInventoryCommand(string ProductId, int Quantity, string ClientId) : IRequest<DeductInventoryResult>;
+public record DeductInventoryCommand(string ProductId, int QuantityToDeduct, string ClientId) : IRequest<DeductInventoryResult>;
 
 /// <summary>
 /// Kết quả trả về sau khi trừ kho.
 /// </summary>
-public record DeductInventoryResult(Guid OrderId, string OrderStatus, DateTimeOffset CreatedOn);
+public record DeductInventoryResult(bool IsSuccess, int RemainingQuantity, int DeductedQuantity);

@@ -1,7 +1,9 @@
-using FlashSale.Application.Features.Inventory.Commands;
-using MediatR;
+using FlashSale.Application.Interfaces;
+using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using OrderCreatedMessage = FlashSale.Application.Features.Inventory.Events.OrderCreatedMessage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using System.Security.Claims;
 
 namespace FlashSale.Api.Controllers;
@@ -17,11 +19,13 @@ namespace FlashSale.Api.Controllers;
 [ApiExplorerSettings(GroupName = "v1")]
 public class FlashSaleController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IInventoryService _inventoryService;
+    private readonly IRabbitMqPublisherService _rabbitMqPublisherService;
 
-    public FlashSaleController(IMediator mediator)
+    public FlashSaleController(IInventoryService inventoryService, IRabbitMqPublisherService rabbitMqPublisherService)
     {
-        _mediator = mediator;
+        _inventoryService = inventoryService;
+        _rabbitMqPublisherService = rabbitMqPublisherService;
     }
 
     /// <summary>
@@ -41,7 +45,6 @@ public class FlashSaleController : ControllerBase
     [ApiExplorerSettings(GroupName = "v1")]
     public async Task<IActionResult> Buy([FromBody] BuyRequest request)
     {
-        // Validate input trước khi gọi service
         if (string.IsNullOrWhiteSpace(request.ProductId))
         {
             return BadRequest(new
@@ -62,7 +65,6 @@ public class FlashSaleController : ControllerBase
             });
         }
 
-        // Lấy ClientId từ authenticated user (ClaimTypes.NameIdentifier)
         var clientId = User.Identity?.IsAuthenticated == true
             ? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
             : null;
@@ -77,21 +79,49 @@ public class FlashSaleController : ControllerBase
             });
         }
 
-        // Trừ kho atomic trên Redis (ngoài transaction DB)
-        var result = await _mediator.Send(new DeductInventoryCommand(request.ProductId, request.Quantity, clientId));
+        var deductResult = await _inventoryService.DeductInventoryAsync(request.ProductId, request.Quantity);
+        if (!deductResult.IsSuccess)
+        {
+            return BadRequest(new
+            {
+                status = "error",
+                code = "INSUFFICIENT_INVENTORY",
+                message = $"Sản phẩm '{request.ProductId}' đã hết hàng (OverSelling). Không tạo đơn.",
+                remainingQuantity = deductResult.RemainingQuantity
+            });
+        }
 
-        // Trả về HTTP 202 Accepted ngay (không chờ xử lý hoàn tất)
+        var orderId = Guid.NewGuid();
+        var occurredOn = DateTimeOffset.UtcNow;
+        var orderCreatedMessage = new OrderCreatedMessage
+        {
+            CorrelationId = orderId,
+            MessageId = Guid.NewGuid(),
+            OccurredOn = occurredOn,
+            Payload = new
+            {
+                orderId,
+                productId = request.ProductId,
+                quantity = request.Quantity,
+                clientId,
+                orderStatus = "Created",
+                createdOn = occurredOn
+            }
+        };
+
+        await _rabbitMqPublisherService.PublishOrderCreatedAsync(orderCreatedMessage);
+
         return Accepted(new
         {
             status = "success",
             code = "ORDER_ACCEPTED",
             message = "Đơn hàng đã được nhận và đang được xử lý.",
-            orderId = result.OrderId,
+            orderId = orderId,
             productId = request.ProductId,
             quantity = request.Quantity,
             clientId = clientId,
             orderStatus = "Created",
-            createdOn = result.CreatedOn
+            createdOn = occurredOn
         });
     }
 }
