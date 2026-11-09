@@ -142,7 +142,6 @@ app.UseSwaggerUI(c =>
 app.MapControllers();
 
 app.MapGet("/", () => "FlashSale Api is running");
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 
 using (var scope = app.Services.CreateScope())
 {

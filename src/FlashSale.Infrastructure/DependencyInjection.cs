@@ -1,4 +1,5 @@
-﻿using FlashSale.Domain.Interfaces;
+﻿using FlashSale.Application.Interfaces;
+using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using FlashSale.Infrastructure.ExternalServices.Redis;
 using FlashSale.Infrastructure.Persistence;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitMQ.Client;
 using StackExchange.Redis;
 
 namespace FlashSale.Infrastructure;
@@ -26,6 +28,9 @@ public static class DependencyInjection
         config.AbortOnConnectFail = false;
         var redisConnection = ConnectionMultiplexer.Connect(config);
         services.AddSingleton(redisConnection);
+
+        // Đăng ký IDatabase (StackExchange.Redis IDatabase) cho HealthCheck
+        services.AddSingleton<IDatabase>(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 
         // Đăng ký Lua script executor
         services.AddSingleton<IRedisScriptExecutor>(_ => new RedisScriptExecutor(redisConnection.GetDatabase()));
@@ -72,9 +77,25 @@ public static class DependencyInjection
         // Đăng ký ReconciliationRepository (doi chieu du lieu, NFR-06)
         services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
 
+        // Đăng ký IDatabaseConnectionChecker (kiem tra ket noi PostgreSQLPrimary cho HealthCheck, NFR-07)
+        services.AddScoped<IDatabaseConnectionChecker, PostgreSqlDatabaseConnectionChecker>();
+
+        // Đăng ký HealthCheckService (kiem tra suc khoe cac dich vao, FR-06, NFR-07)
+        services.AddScoped<IHealthCheckService, HealthCheckService>();
+
         // Đăng ký RabbitMqPublisherService (trien khai IRabbitMqPublisherService, publish OrderCreatedMessage vao Queue)
         var rabbitMqConnectionString = configuration["RABBITMQ_CONNECTION_STRING"] ?? "amqp://guest:guest@localhost:5672/";
         services.AddSingleton<IRabbitMqPublisherService>(_ => new RabbitMqPublisherService(rabbitMqConnectionString));
+
+        // Đăng ký IConnection RabbitMQ (singleton) cho HealthCheck
+        var rabbitFactory = new ConnectionFactory
+        {
+            Uri = new Uri(rabbitMqConnectionString),
+            AutomaticRecoveryEnabled = false,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
+        };
+        var rabbitConnection = rabbitFactory.CreateConnection();
+        services.AddSingleton<RabbitMQ.Client.IConnection>(rabbitConnection);
 
         return services;
     }
