@@ -57,6 +57,9 @@ public static class DependencyInjection
         services.AddSingleton<IValidator<LoginCommand>, LoginCommandValidator>();
         services.AddSingleton<IValidator<RegisterCommand>, RegisterCommandValidator>();
 
+        // Đăng ký MetricService (xuat metric P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining, FR-06, NFR-07)
+        services.AddScoped<IMetricService, MetricService>();
+
         return services;
     }
 }

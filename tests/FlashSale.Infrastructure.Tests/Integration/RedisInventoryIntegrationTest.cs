@@ -39,7 +39,7 @@ public class RedisInventoryIntegrationTest : IAsyncLifetime
         _redisConnection = await ConnectionMultiplexer.ConnectAsync(_redisContainer.GetConnectionString());
         _redisDatabase = _redisConnection.GetDatabase();
         _scriptExecutor = new RedisScriptExecutor(_redisDatabase);
-        _inventoryRepository = new RedisInventoryService(_scriptExecutor, _luaScriptContent);
+        _inventoryRepository = new RedisInventoryService(_scriptExecutor, _luaScriptContent, _redisDatabase);
     }
 
     public async Task DisposeAsync()

@@ -45,6 +45,9 @@ public class Program
         // Background Service xuat phat Outbox Pending ra RabbitMQ dinh ky (moi 30 giay mot lan, FR-04, NFR-06)
         builder.Services.AddHostedService<OutboxPublisherWorkerService>();
 
+        // Background Service thu thap metric dinh ky (moi 30 giay mot lan, FR-06, NFR-07)
+        builder.Services.AddHostedService<MetricWorkerService>();
+
         var host = builder.Build();
         host.Run();
     }

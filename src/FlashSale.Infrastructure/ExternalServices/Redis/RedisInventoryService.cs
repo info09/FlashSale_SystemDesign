@@ -2,6 +2,7 @@ using StackExchange.Redis;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Domain.Exceptions;
+using System.Linq;
 
 namespace FlashSale.Infrastructure.ExternalServices.Redis;
 
@@ -14,11 +15,13 @@ public class RedisInventoryService : IInventoryRepository
 {
     private readonly IRedisScriptExecutor _scriptExecutor;
     private readonly string _luaScript;
+    private readonly IDatabase _redisDatabase;
 
-    public RedisInventoryService(IRedisScriptExecutor scriptExecutor, string luaScriptContent)
+    public RedisInventoryService(IRedisScriptExecutor scriptExecutor, string luaScriptContent, IDatabase redisDatabase)
     {
         _scriptExecutor = scriptExecutor;
         _luaScript = luaScriptContent;
+        _redisDatabase = redisDatabase;
     }
 
     /// <summary>
@@ -71,5 +74,27 @@ public class RedisInventoryService : IInventoryRepository
             new RedisKey[] { key },
             new RedisValue[] { quantity },
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Lay tong so luong ton kho con lai cua tat ca san pham tren Redis (InventoryRemaining).
+    /// </summary>
+    public async Task<int> GetInventoryRemainingAsync(CancellationToken cancellationToken = default)
+    {
+        long total = 0;
+        var server = _redisDatabase.Multiplexer.GetServer(_redisDatabase.Multiplexer.GetEndPoints().First());
+        var keys = server.Keys(pattern: "inventory:*", pageSize: 1000).ToList();
+
+        if (keys.Count == 0)
+            return 0;
+
+        var values = await _redisDatabase.StringGetAsync(keys.ToArray());
+        foreach (var value in values)
+        {
+            if (value.HasValue && int.TryParse(value.ToString(), out var qty))
+                total += qty;
+        }
+
+        return (int)total;
     }
 }

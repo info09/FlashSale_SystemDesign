@@ -34,4 +34,10 @@ public interface IInventoryRepository
     /// <param name="quantity">Số lượng tồn kho ban đầu.</param>
     /// <param name="cancellationToken">Token hủy bỏ thao tác bất đồng bộ.</param>
     Task SetInventoryAsync(string productId, int quantity, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lay tong so luong ton kho con lai cua tat ca san pham tren Redis (InventoryRemaining).
+    /// </summary>
+    /// <param name="cancellationToken">Token huy bo thao tac bat dong bo.</param>
+    Task<int> GetInventoryRemainingAsync(CancellationToken cancellationToken = default);
 }

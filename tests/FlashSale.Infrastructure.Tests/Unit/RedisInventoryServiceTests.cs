@@ -36,7 +36,7 @@ redis.call(""SET"", key, newQuantity)
 
 -- Tra ve so luong con lai
 return newQuantity";
-        _service = new RedisInventoryService(_scriptExecutorMock.Object, _luaScriptContent);
+        _service = new RedisInventoryService(_scriptExecutorMock.Object, _luaScriptContent, Mock.Of<IDatabase>());
     }
 
     [Fact]

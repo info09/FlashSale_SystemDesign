@@ -43,7 +43,8 @@ public static class DependencyInjection
         // Đăng ký InventoryRepository với nội dung Lua script Inventory đã được đọc từ embedded resource
         services.AddSingleton<IInventoryRepository>(_ => new RedisInventoryService(
             new RedisScriptExecutor(redisConnection.GetDatabase()),
-            inventoryLuaScriptContent));
+            inventoryLuaScriptContent,
+            redisConnection.GetDatabase()));
 
         // Đăng ký PostgreSQLPrimaryContext (ghi Order + Outbox + User qua Identity)
         var primaryConnectionString = configuration["POSTGRESQL_PRIMARY_CONNECTION_STRING"]
@@ -82,6 +83,9 @@ public static class DependencyInjection
 
         // Đăng ký HealthCheckService (kiem tra suc khoe cac dich vao, FR-06, NFR-07)
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+
+        // Đăng ký MetricCollector (thu thap metric tu infra, FR-06, NFR-07)
+        services.AddScoped<IMetricCollector, MetricCollector>();
 
         // Đăng ký RabbitMqPublisherService (trien khai IRabbitMqPublisherService, publish OrderCreatedMessage vao Queue)
         var rabbitMqConnectionString = configuration["RABBITMQ_CONNECTION_STRING"] ?? "amqp://guest:guest@localhost:5672/";
