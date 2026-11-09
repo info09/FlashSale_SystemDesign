@@ -1,4 +1,4 @@
-namespace FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+namespace FlashSale.Domain;
 
 /// <summary>
 /// Các hằng số tên Exchange/Queue/Routing Key cho RabbitMQ.
@@ -23,4 +23,13 @@ public static class RabbitMqConstants
 
     /// <summary>Routing key cho Dead Letter Queue.</summary>
     public const string DeadLetterRoutingKey = "order.dlq";
+
+    /// <summary>Tên Exchange cho su kien Outbox da xuat phat (downstream notification).</summary>
+    public const string OrderNotificationExchangeName = "order_notification_exchange";
+
+    /// <summary>Tên Queue chua su kien Outbox da xuat phat cho consumer downstream tieu thu.</summary>
+    public const string OrderNotificationQueueName = "order_notification_queue";
+
+    /// <summary>Routing key cho su kien Outbox da xuat phat (downstream notification).</summary>
+    public const string OrderNotificationRoutingKey = "order.notification";
 }

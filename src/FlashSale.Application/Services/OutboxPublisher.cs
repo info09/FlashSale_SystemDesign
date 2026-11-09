@@ -1,5 +1,6 @@
 using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
+using FlashSale.Domain;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using System.Text.Json;
@@ -24,7 +25,7 @@ public class OutboxPublisher : IOutboxPublisher
     }
 
     /// <summary>
-    /// Xuất phat tất cả các ghi Outbox chưa được xử lý ra RabbitMQ Queue (OrderPipeline).
+    /// Xuất phat tất cả các ghi Outbox chưa được xử lý ra RabbitMQ Queue (OrderNotification).
     /// Sau khi xuất phat thành công, đánh dấu ghi Outbox đã được xử lý.
     /// </summary>
     public async Task PublishPendingOutboxAsync(CancellationToken cancellationToken = default)
@@ -35,19 +36,26 @@ public class OutboxPublisher : IOutboxPublisher
         {
             try
             {
-                // Xây dựng OrderCreatedMessage từ nội dung Outbox
+                // Xây dựng message từ nội dung Outbox
                 var payloadObj = JsonSerializer.Deserialize<object>(outbox.Payload)
                     ?? throw new InvalidOperationException($"Không thể deserialize Payload của Outbox Id {outbox.Id}");
 
-                var message = new OrderCreatedMessage
+                var messageJson = JsonSerializer.Serialize(new
                 {
                     CorrelationId = outbox.CorrelationId,
                     MessageId = outbox.Id,
                     OccurredOn = outbox.OccurredOn,
                     Payload = payloadObj
-                };
+                });
 
-                await _rabbitMqPublisherService.PublishOrderCreatedAsync(message, cancellationToken);
+                // Publish vao Order Notification Exchange (downstream consumer tieu thu)
+                await _rabbitMqPublisherService.PublishAsync(
+                    exchange: RabbitMqConstants.OrderNotificationExchangeName,
+                    routingKey: RabbitMqConstants.OrderNotificationRoutingKey,
+                    messageJson: messageJson,
+                    correlationId: outbox.CorrelationId,
+                    messageId: outbox.Id,
+                    cancellationToken: cancellationToken);
 
                 outbox.MarkAsProcessed();
                 await _outboxRepository.UpdateAsync(outbox, cancellationToken);

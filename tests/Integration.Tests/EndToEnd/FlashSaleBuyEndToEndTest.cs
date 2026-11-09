@@ -1,5 +1,6 @@
 using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
+using FlashSale.Domain;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using FlashSale.Infrastructure.Persistence;

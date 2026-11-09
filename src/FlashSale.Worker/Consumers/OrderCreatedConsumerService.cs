@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FlashSale.Application.Interfaces;
+using FlashSale.Domain;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;

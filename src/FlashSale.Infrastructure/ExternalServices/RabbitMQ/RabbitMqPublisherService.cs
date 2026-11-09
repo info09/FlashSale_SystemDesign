@@ -1,5 +1,6 @@
 using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
+using FlashSale.Domain;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -81,6 +82,25 @@ public class RabbitMqPublisherService : IRabbitMqPublisherService, IDisposable
             queue: RabbitMqConstants.DeadLetterQueueName,
             exchange: RabbitMqConstants.DeadLetterExchangeName,
             routingKey: RabbitMqConstants.DeadLetterRoutingKey);
+
+        // Khai báo Order Notification Exchange/Queue (downstream consumer)
+        _channel.ExchangeDeclare(
+            exchange: RabbitMqConstants.OrderNotificationExchangeName,
+            type: ExchangeType.Direct,
+            durable: true,
+            autoDelete: false);
+
+        _channel.QueueDeclare(
+            queue: RabbitMqConstants.OrderNotificationQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        _channel.QueueBind(
+            queue: RabbitMqConstants.OrderNotificationQueueName,
+            exchange: RabbitMqConstants.OrderNotificationExchangeName,
+            routingKey: RabbitMqConstants.OrderNotificationRoutingKey);
     }
 
     public async Task PublishOrderCreatedAsync(OrderCreatedMessage orderCreatedMessage, CancellationToken cancellationToken = default)
@@ -98,6 +118,33 @@ public class RabbitMqPublisherService : IRabbitMqPublisherService, IDisposable
         _channel.BasicPublish(
             exchange: RabbitMqConstants.ExchangeName,
             routingKey: RabbitMqConstants.RoutingKey,
+            mandatory: true,
+            basicProperties: properties,
+            body: body);
+
+        await Task.CompletedTask;
+    }
+
+    public async Task PublishAsync(
+        string exchange,
+        string routingKey,
+        string messageJson,
+        Guid correlationId,
+        Guid? messageId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var body = Encoding.UTF8.GetBytes(messageJson);
+
+        var properties = _channel.CreateBasicProperties();
+        properties.Persistent = true;
+        properties.MessageId = messageId?.ToString() ?? Guid.NewGuid().ToString();
+        properties.Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        properties.ContentType = "application/json";
+        properties.CorrelationId = correlationId.ToString();
+
+        _channel.BasicPublish(
+            exchange: exchange,
+            routingKey: routingKey,
             mandatory: true,
             basicProperties: properties,
             body: body);

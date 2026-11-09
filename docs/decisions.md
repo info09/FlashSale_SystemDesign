@@ -142,3 +142,15 @@ Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con �
 - **Danh doi/he quy (Trade-off):** Co khoang tho gian tre it it (toi da 30 giay) giua khi Order duoc ghi va khi Outbox duoc publish ra Queue. Neu can publish ngay lap tuc, co the giam interval hoac goi ngay trong OrderCreatedConsumerService.
 - **Trang thai (Status):** Active
 
+### [2026-11-09] — Them consumer downstream OrderNotification xuat phat tu Outbox
+
+- **Boi canh (Context):** Sau Story 4.14, OutboxPublisherWorkerService xuat phat cac ghi Outbox Pending ra Order Notification Exchange (order_notification_exchange, routing key order.notification), nhung chua co consumer downstream nao tieu thu message tu Queue order_notification_queue. Can them consumer de hoan thanh pipeline outbox -> downstream (NFR-06, FR-04).
+- **Cac lua chua da xem xuat (Options considered):**
+  - Khong them consumer: message vao Queue order_notification_queue vo han, khong co he thong nao tien tiep xu ly su kien Outbox da xuat phat.
+  - Dung chung Worker chinh (order_pipeline_queue) de consume: gay nham luan, vi Queue chinh la cho OrderCreated message, khong phai cho thong bao downstream.
+  - Them OrderNotificationConsumerService + OrderNotificationWorkerService (BackgroundService) consume tu Queue order_notification_queue: tach roi rang, doc lap tu Worker chinh, hoan thanh pipeline downstream.
+- **Quyet dinh (Decision):** Chon lua chua ba: them OrderNotificationConsumerService (xu ly nghiep vu downstream, kiem tra Order ton tai) + OrderNotificationWorkerService (BackgroundService consume qua BasicGet tu Queue order_notification_queue); dang ky AddScoped<OrderNotificationConsumerService> + AddHostedService<OrderNotificationWorkerService> trong Worker/Program.cs.
+- **Ly do (Rationale):** Hoan thanh pipeline Outbox (Pending -> Publish ra Queue downstream -> Consumer downstream tien tiep xu ly), dam bao su kien da luu duoc tien tiep xu ly (NFR-06). Consumer downstream co idempotency (kiem tra Order ton tai truoc khi xu ly).
+- **Danh doi/he quy (Trade-off):** Can them BackgroundService moi (OrderNotificationWorkerService) chay song song voi Worker chinh, tang tai nguyen it it. Neu can giam latency, co the giam interval poll hoac dung EventingConsumer (BasicConsume) thay vi BasicGet.
+- **Trang thai (Status):** Active
+

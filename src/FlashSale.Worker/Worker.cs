@@ -1,5 +1,5 @@
 using FlashSale.Application.Services;
-using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using FlashSale.Domain;
 using FlashSale.Worker.Consumers;
 using RabbitMQ.Client;
 using System.Text;

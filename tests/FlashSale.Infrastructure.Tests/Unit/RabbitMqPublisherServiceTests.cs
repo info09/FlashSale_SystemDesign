@@ -1,4 +1,5 @@
 using FluentAssertions;
+using FlashSale.Domain;
 using FlashSale.Domain.Entities;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using Moq;
