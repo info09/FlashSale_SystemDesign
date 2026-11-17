@@ -209,6 +209,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - flashsale-grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - flashsale-network
     restart: unless-stopped
