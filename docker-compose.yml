@@ -59,6 +59,8 @@ services:
       - RABBITMQ_EXCHANGE_NAME=${RABBITMQ_EXCHANGE_NAME}
       - RABBITMQ_ROUTING_KEY=${RABBITMQ_ROUTING_KEY}
       - CORRELATION_ID_HEADER=${CORRELATION_ID_HEADER}
+    ports:
+      - "8081:8080"
     networks:
       - flashsale-network
     restart: unless-stopped

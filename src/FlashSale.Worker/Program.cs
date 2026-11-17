@@ -49,6 +49,13 @@ public class Program
         builder.Services.AddHostedService<MetricWorkerService>();
 
         var host = builder.Build();
+
+        // Chay MetricEndpointService (Kestrel expose /api/v1/metrics cho Prometheus scrape)
+        var serviceProvider = host.Services;
+        var logger = serviceProvider.GetRequiredService<ILogger<MetricEndpointService>>();
+        var metricEndpointService = new MetricEndpointService(serviceProvider, logger);
+        _ = metricEndpointService.StartAsync(default);
+
         host.Run();
     }
 }
