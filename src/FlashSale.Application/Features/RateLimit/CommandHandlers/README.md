@@ -1,12 +1,10 @@
-# Folder: CommandHandlers (RateLimit)
+# CommandHandlers — RateLimit (Application/Features)
 
-Chứa các Command Handler của tính năng Giới hạn tần số (RateLimit) trong Application layer.
+Chứa handler xử lý command RateLimit.
 
-| File | Chức năng |
-|------|-----------|
-| `RateLimitCommandHandler.cs` | Xử lý Command kiểm tra rate limit. |
+## File
+- `RateLimitCommandHandler.cs`: gọi service kiểm tra rate limit và trả kết quả cho pipeline/middleware.
 
 ## Quy tắc
-
-- Handler KHÔNG chứa business logic phức tạp, chỉ orchestrate Domain Service và Repository.
-- Tên Handler phải hậu tố `CommandHandler` theo Convention 1.2.
+- Không truy cập Redis trực tiếp; dùng abstraction/service.
+- Tên hậu tố `CommandHandler`.

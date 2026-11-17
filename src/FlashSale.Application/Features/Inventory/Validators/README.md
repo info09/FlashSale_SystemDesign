@@ -1,13 +1,11 @@
-# Folder: Validators (Inventory)
+# Validators — Inventory (Application/Features)
 
-Chứa các Validator của tính năng Kho hàng (Inventory) trong Application layer.
+Chứa FluentValidation validators cho command Inventory.
 
-| File | Chức năng |
-|------|-----------|
-| `AddInventoryCommandValidator.cs` | Validator cho AddInventoryCommand. |
-| `DeductInventoryCommandValidator.cs` | Validator cho DeductInventoryCommand. |
+## File
+- `AddInventoryCommandValidator.cs`: validate request thêm tồn kho.
+- `DeductInventoryCommandValidator.cs`: validate request trừ tồn kho.
 
 ## Quy tắc
-
-- Validator dùng FluentValidation.
-- Tên Validator phải hậu tố `Validator` theo Convention 1.2.
+- Đảm bảo `ProductId`, số lượng hợp lệ trước khi xử lý nghiệp vụ.
+- Tên hậu tố `Validator`.

@@ -1,29 +1,16 @@
 # FlashSale.Infrastructure.Tests
 
-Integration test cho layer Infrastructure. Sử dụng Testcontainers (PostgreSQL, Redis, RabbitMQ).
+Tests cho `FlashSale.Infrastructure` (unit + integration).
 
-## Cấu trúc
+## Phạm vi tiêu biểu
+- **Unit:** `RedisRateLimitServiceTests`, `RedisInventoryServiceTests`, `RabbitMqPublisherServiceTests`, `AuthServiceTests`, `HealthCheckServiceTests`, `OrderCreatedMessageTests`, ...
+- **Integration (Testcontainers):** kết nối/hoạt động với PostgreSQL, Redis, RabbitMQ; repositories (`OrderRepository`/`OutboxRepository`/`ReconciliationRepository`/`UserRepository`), transaction outbox, purge, publish/consume hạ tầng liên quan.
 
-| Thư mục | File | Mô tả |
-|---------|------|-------|
-| `Integration/` | `OutboxRepositoryIntegrationTest.cs` | Test ghi Order + Outbox cùng transaction |
-| `Integration/` | `OutboxPurgeIntegrationTest.cs` | Test purge Outbox cũ |
-| `Integration/` | `ReconciliationRepositoryIntegrationTest.cs` | Test truy vấn Reconciliation |
-| `Integration/` | `RabbitMqPublisherIntegrationTest.cs` | Test publish message RabbitMQ thật |
-| `Integration/` | `RedisInventoryIntegrationTest.cs` | Test trừ kho atomic Redis |
-| `Integration/` | `RedisRateLimitIntegrationTest.cs` | Test rate limit Redis |
-| `Integration/` | `UserRepositoryIntegrationTest.cs` | Test UserRepository |
-| `Integration/` | `InfrastructureConnectionTests.cs` | Test kết nối dịch vụ |
-| `Unit/` | `RedisRateLimitServiceTests.cs` | Test unit RedisRateLimitService |
-| `Unit/` | `RedisInventoryServiceTests.cs` | Test unit RedisInventoryService |
-| `Unit/` | `RabbitMqPublisherServiceTests.cs` | Test unit RabbitMqPublisherService |
-| `Unit/` | `AuthServiceTests.cs` | Test unit AuthService |
-| `Unit/` | `OrderCreatedMessageTests.cs` | Test message contract |
-
-## Cách chạy
-
+## Chạy test
 ```bash
 dotnet test tests/FlashSale.Infrastructure.Tests -c Release
 ```
 
-Yêu cầu Docker/Testcontainers.
+## Lưu ý
+- Cần Docker để chạy integration tests dùng Testcontainers.
+- Một số test có thể tốn thời gian do khởi tạo container.

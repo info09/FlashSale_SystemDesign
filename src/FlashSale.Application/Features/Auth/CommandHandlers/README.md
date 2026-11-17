@@ -1,13 +1,11 @@
-# Folder: CommandHandlers (Auth)
+# CommandHandlers — Auth (Application/Features)
 
-Chứa các Command Handler của tính năng Xác thực (Auth) trong Application layer.
+Chứa handler xử lý command xác thực/đăng ký.
 
-| File | Chức năng |
-|------|-----------|
-| `LoginCommandHandler.cs` | Xử lý Command đăng nhập (login). |
-| `RegisterCommandHandler.cs` | Xử lý Command đăng ký (register). |
+## File
+- `LoginCommandHandler.cs`: xử lý đăng nhập, trả kết quả/token theo luồng auth.
+- `RegisterCommandHandler.cs`: xử lý đăng ký người dùng.
 
 ## Quy tắc
-
-- Handler KHÔNG chứa business logic phức tạp, chỉ orchestrate Domain Service và Repository.
-- Tên Handler phải hậu tố `CommandHandler` theo Convention 1.2.
+- Handler orchestrate service/repository qua interface, không nhúng chi tiết hạ tầng.
+- Tên hậu tố `CommandHandler`.

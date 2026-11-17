@@ -1,16 +1,16 @@
-# Folder: Services (Worker)
+# Services (FlashSale.Worker)
 
-Chứa các Background Service của Async Worker (.NET Background Service).
+Chứa các hosted/background services của Worker.
 
-| File | Chức năng |
-|------|-----------|
-| `Worker.cs` | Background Service chính, consume message từ Queue `order_pipeline_queue` qua `BasicGet`, triển khai Retry + DLQ (FR-04, FR-05). |
-| `OutboxPublisherWorkerService.cs` | Background Service publish Outbox Pending ra RabbitMQ Queue định kỳ (mỗi 30 giây) (FR-04, NFR-06). |
-| `OutboxPurgeWorkerService.cs` | Background Service purge/archive bảng Outbox định kỳ (mỗi 24 giờ) (NFR-06). |
-| `OrderNotificationWorkerService.cs` | Background Service consume message từ Queue `order_notification_queue` (downstream) (FR-04, NFR-06). |
+## Services
+- `Worker.cs`: vòng lặp consume `order_pipeline_queue`, xử lý message, áp dụng retry exponential backoff và chuyển DLQ sau số lần thất bại quy định (FR-04, FR-05).
+- `OutboxPublisherWorkerService.cs`: quét và publish Outbox pending định kỳ (mặc định ~30s).
+- `OutboxPurgeWorkerService.cs`: purge/archive Outbox đã xử lý theo chu kỳ/cấu hình (NFR-06).
+- `OrderNotificationWorkerService.cs`: consume queue notification downstream.
+- `MetricWorkerService.cs`: thu thập metric định kỳ từ hệ thống.
+- `MetricEndpointService.cs`: host endpoint HTTP `/api/v1/metrics` để Prometheus scrape.
 
 ## Quy tắc
-
-- Worker là .NET Background Service, chạy độc lập từ Api.
-- Consumer phải ack message sau khi xử lý thành công, nack/retry sau khi lỗi.
-- Không dùng `Console.WriteLine` trong consumer.
+- Mỗi service có trách nhiệm rõ, chạy độc lập theo chu kỳ/event loop phù hợp.
+- Tôn trọng cấu hình timeout/retry/purge; không hardcode secret.
+- Đảm bảo xử lý lỗi có log và không làm sập vòng lặp worker ngoài ý muốn.

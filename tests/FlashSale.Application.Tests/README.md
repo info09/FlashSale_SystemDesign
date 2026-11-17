@@ -1,23 +1,19 @@
 # FlashSale.Application.Tests
 
-Unit test cho layer Application.
+Unit tests cho `FlashSale.Application`.
 
-## Cấu trúc
+## Phạm vi tiêu biểu
+- `OrderServiceTests`: tạo đơn, hết kho/validation, transaction outbox (mock dependencies).
+- `InventoryServiceTests`, `RateLimitServiceTests`, `MetricServiceTests`
+- `OutboxPurgeServiceTests`, `ReconciliationServiceTests`
+- `ApplicationSmokeTest` và các test service liên quan khác.
 
-| File | Mô tả |
-|------|-------|
-| `Unit/OrderServiceTests.cs` | Test OrderService (tạo đơn, hết kho, validation) |
-| `Unit/ReconciliationServiceTests.cs` | Test ReconciliationService (đối chiếu Order/Outbox) |
-| `Unit/OutboxPurgeServiceTests.cs` | Test OutboxPurgeService (xóa Outbox cũ) |
-
-## Cách chạy
-
+## Chạy test
 ```bash
 dotnet test tests/FlashSale.Application.Tests -c Release
 ```
 
-## Quy tắc test
-
-- Dùng Moq mock tất cả dependency external (IOrderRepository, IInventoryRepository, IOutboxService, IUnitOfWork).
-- Mỗi test method tuân theo AAA (Arrange-Act-Assert).
-- Tên test method: `{MethodUnderTest}_{Scenario}_{ExpectedResult}`.
+## Quy tắc
+- Mock toàn bộ dependency hạ tầng (`IOrderRepository`, `IInventoryRepository`, `IUnitOfWork`, ...).
+- Kiểm tra hành vi orchestration, lỗi nghiệp vụ, và boundary điều kiện.
+- AAA, tên test rõ ràng.

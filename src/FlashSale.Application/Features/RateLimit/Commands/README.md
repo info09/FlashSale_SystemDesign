@@ -1,11 +1,10 @@
-# Folder: Commands (RateLimit)
+# Commands — RateLimit (Application/Features)
 
-Chứa các Command của tính năng Giới hạn tần số (RateLimit) trong Application layer.
+Chứa command cho nghiệp vụ kiểm tra giới hạn tần số.
 
-| File | Chức năng |
-|------|-----------|
-| `RateLimitCommand.cs` | Command kiểm tra rate limit. |
+## File
+- `RateLimitCommand.cs`: dữ liệu đầu vào để kiểm tra RateLimit.
 
 ## Quy tắc
-
-- Tên Command phải hậu tố `Command` theo Convention 1.1.
+- Command mang ngữ cảnh cần thiết (client/key/request info theo thiết kế) để service đánh giá token bucket.
+- Thuật ngữ chuẩn: `RateLimit`, `TokenBucket`.

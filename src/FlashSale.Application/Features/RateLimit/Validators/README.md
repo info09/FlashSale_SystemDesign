@@ -1,12 +1,10 @@
-# Folder: Validators (RateLimit)
+# Validators — RateLimit (Application/Features)
 
-Chứa các Validator của tính năng Giới hạn tần số (RateLimit) trong Application layer.
+Chứa validator cho command RateLimit.
 
-| File | Chức năng |
-|------|-----------|
-| `RateLimitCommandValidator.cs` | Validator cho RateLimitCommand. |
+## File
+- `RateLimitCommandValidator.cs`: validate tham số đầu vào của rate limit command.
 
 ## Quy tắc
-
-- Validator dùng FluentValidation.
-- Tên Validator phải hậu tố `Validator` theo Convention 1.2.
+- Validate input tối thiểu cần thiết để tránh xử lý sai/nguy hiểm.
+- Tên hậu tố `Validator`.

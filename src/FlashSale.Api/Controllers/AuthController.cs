@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Dang nhap client va tra ve Access Token (Bearer Token/JWT).
-/// Neu xac thuc thanh cong, tra ve token de goi cac endpoint can phan quyen (FR-01, NFR-04).
+    /// Neu xac thuc thanh cong, tra ve token de goi cac endpoint can phan quyen (FR-01, NFR-04).
     /// </summary>
     /// <param name="command">Thong tin dang nhap: UserName va Password.</param>
     /// <returns>Access Token kèm thong tin nguoi dung.</returns>
@@ -68,7 +68,7 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Dang ki tai khoan moi cho client.
-/// Neu thanh cong, tra ve thong tin User profile da tao (FR-01, NFR-04).
+    /// Neu thanh cong, tra ve thong tin User profile da tao (FR-01, NFR-04).
     /// </summary>
     /// <param name="command">Thong tin dang ki: UserName, Email, Password.</param>
     /// <returns>Thong tin User profile da tao.</returns>

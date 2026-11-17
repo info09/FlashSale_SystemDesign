@@ -1,34 +1,30 @@
 # FlashSale.Worker
 
-Async Worker (.NET Background Service) của hệ thống Flash Sale. Tham chiếu `FlashSale.Application` + `FlashSale.Infrastructure`. Chạy độc lập từ API.
+Background worker xử lý bất đồng bộ: consume OrderPipeline, đảm bảo ghi Order/Outbox, retry/DLQ, publish outbox pending, notification downstream, và thu thập/expose metrics.
 
-## Cấu trúc
+## Thành phần
+- `Consumers/`
+  - `OrderCreatedConsumerService.cs`: xử lý message tạo đơn từ `order_pipeline_queue`.
+  - `OrderNotificationConsumerService.cs`: xử lý message notification downstream.
+- `Services/`
+  - `Worker.cs`: hosted service consume pipeline chính, retry + DLQ.
+  - `OutboxPublisherWorkerService.cs`: publish Outbox pending định kỳ.
+  - `OutboxPurgeWorkerService.cs`: purge/archive Outbox định kỳ.
+  - `OrderNotificationWorkerService.cs`: consume notification queue.
+  - `MetricWorkerService.cs`: thu thập metric định kỳ.
+  - `MetricEndpointService.cs`: expose endpoint `/api/v1/metrics` (cho Prometheus scrape).
+- `Program.cs`: cấu hình DI, RabbitMQ connection/channel, đăng ký hosted services.
 
-| Thư mục | Mô tả |
-|---------|-------|
-| `Consumers/` | OrderCreatedConsumerService, OrderNotificationConsumerService |
-| `Services/` | Worker, OutboxPurgeWorkerService, OutboxPublisherWorkerService |
-| `Program.cs` | Cấu hình host, RabbitMQ connection/channel, DI, BackgroundService |
-
-## Background Service
-
-| Service | Mô tả | Tần suất |
-|---------|-------|----------|
-| `Worker` | Consume message từ `order_pipeline_queue`, tạo Order + ghi Outbox | Liên tục |
-| `OutboxPublisherWorkerService` | Publish Outbox Pending ra Order Notification Queue | Mỗi 30 giây |
-| `OutboxPurgeWorkerService` | Purge Outbox đã xử lý cũ hơn PurgeDays | Mỗi 24 giờ |
-| `OrderNotificationWorkerService` | Consume message từ `order_notification_queue` | Liên tục |
-
-## Cách chạy
-
+## Chạy local
 ```bash
 dotnet run --project src/FlashSale.Worker/FlashSale.Worker.csproj
 ```
 
-Cần cấu hình biến môi trường: `POSTGRESQL_PRIMARY_CONNECTION_STRING`, `RABBITMQ_CONNECTION_STRING`, v.v. (xem `.env.example`).
+## Lưu ý
+- Cần cấu hình `POSTGRESQL_PRIMARY_CONNECTION_STRING`, `RABBITMQ_CONNECTION_STRING`, ... qua environment.
+- Worker metrics mặc định phục vụ qua endpoint riêng (xem `MetricEndpointService`/compose, thường map cổng `8081`).
 
-## Cách chạy test
-
+## Test
 ```bash
 dotnet test tests/FlashSale.Worker.Tests -c Release
 ```

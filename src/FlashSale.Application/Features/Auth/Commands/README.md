@@ -1,13 +1,11 @@
-# Folder: Commands (Auth)
+# Commands — Auth (Application/Features)
 
-Chứa các Command của tính năng Xác thực (Auth) trong Application layer.
+Chứa các command cho luồng xác thực/đăng ký người dùng.
 
-| File | Chức năng |
-|------|-----------|
-| `LoginCommand.cs` | Command đăng nhập người dùng. |
-| `RegisterCommand.cs` | Command đăng ký người dùng mới. |
+## File
+- `LoginCommand.cs`: dữ liệu đầu vào cho đăng nhập.
+- `RegisterCommand.cs`: dữ liệu đầu vào cho đăng ký tài khoản.
 
 ## Quy tắc
-
-- Tên Command phải hậu tố `Command` theo Convention 1.1.
-- Dùng MediatR cho CQRS dispatching.
+- Command là DTO bất biến/record mang dữ liệu request vào tầng xử lý.
+- Tên hậu tố `Command`, thuật ngữ theo `docs/domain-glossary.md` và quyết định auth hiện tại (Identity + JWT).

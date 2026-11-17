@@ -1,18 +1,18 @@
 # FlashSale.Api.Tests
 
-Unit test cho layer API.
+Unit tests cho `FlashSale.Api`.
 
-## Cấu trúc
+## Phạm vi tiêu biểu
+- `RateLimitMiddlewareTests`: hành vi chặn/cho phép request theo rate limit.
+- `InventoryControllerTests`: hành vi endpoint/controller tồn kho.
+- `HttpsRedirectionTests`: yêu cầu/redirect HTTPS theo cấu hình.
+- `ApiSmokeTest`: khởi tạo/cấu hình cơ bản API.
 
-| File | Mô tả |
-|------|-------|
-| `Unit/RateLimitMiddlewareTests.cs` | Test RateLimitMiddleware |
-| `Unit/InventoryControllerTests.cs` | Test InventoryController |
-| `Unit/HttpsRedirectionTests.cs` | Test bắt buộc HTTPS |
-| `Unit/ApiSmokeTest.cs` | Test khói API |
-
-## Cách chạy
-
+## Chạy test
 ```bash
 dotnet test tests/FlashSale.Api.Tests -c Release
 ```
+
+## Quy tắc
+- Tập trung vào controller/middleware/pipeline HTTP, mock dependency bên dưới.
+- Kiểm tra status code, contract response và điều kiện auth/rate limit khi liên quan.

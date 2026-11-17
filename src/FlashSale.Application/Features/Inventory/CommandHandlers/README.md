@@ -1,13 +1,11 @@
-# Folder: CommandHandlers (Inventory)
+# CommandHandlers — Inventory (Application/Features)
 
-Chứa các Command Handler của tính năng Kho hàng (Inventory) trong Application layer.
+Chứa handler xử lý command tồn kho.
 
-| File | Chức năng |
-|------|-----------|
-| `AddInventoryCommandHandler.cs` | Xử lý Command thêm tồn kho. |
-| `DeductInventoryCommandHandler.cs` | Xử lý Command trừ tồn kho atomic (FR-02). |
+## File
+- `AddInventoryCommandHandler.cs`: xử lý thêm tồn kho.
+- `DeductInventoryCommandHandler.cs`: xử lý trừ tồn kho atomic.
 
 ## Quy tắc
-
-- Handler KHÔNG chứa business logic phức tạp, chỉ orchestrate Domain Service và Repository.
-- Tên Handler phải hậu tố `CommandHandler` theo Convention 1.2.
+- Handler gọi service/interface phù hợp, không truy cập trực tiếp Redis/DB.
+- Tên hậu tố `CommandHandler`.

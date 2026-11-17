@@ -1,20 +1,19 @@
-# Folder: Services (Application)
+# Services (FlashSale.Application)
 
-Chứa các dịch vụ nghiệp vụ của Application layer.
+Chứa các service triển khai nghiệp vụ/orchestration của Application layer.
 
-| File | Chức năng |
-|------|-----------|
-| `OrderService.cs` | Dịch vụ tạo đơn hàng (Order) sau khi trừ kho thành công (FR-04). |
-| `InventoryService.cs` | Dịch vụ trừ kho atomic trên Redis qua Lua Script (FR-02). |
-| `OutboxService.cs` | Dịch vụ quản lý ghi sự kiện vào bảng Outbox. |
-| `OutboxPublisher.cs` | Dịch vụ xuất phat ghi Outbox Pending ra RabbitMQ Queue. |
-| `OutboxPurgeService.cs` | Dịch vụ purge/archive bảng Outbox cũ hơn PurgeDays (NFR-06). |
-| `OutboxPurgeOptions.cs` | Cấu hình thời gian purge/archive bảng Outbox (PurgeDays). |
-| `ReconciliationService.cs` | Dịch vụ đối chiếu Order và Outbox (NFR-06). |
-| `ExponentialBackoffPolicy.cs` | Chính sách Retry với Exponential Backoff (FR-05). |
-| `RateLimitService.cs` | Dịch vụ kiểm tra rate limit qua Redis Lua Script (FR-01). |
+## Service chính
+- `OrderService.cs`: tạo đơn và ghi Outbox trong cùng transaction PostgreSQL (Transactional Outbox Pattern, FR-04/NFR-06).
+- `InventoryService.cs`: xử lý nghiệp vụ tồn kho, phối hợp repository/Redis implementation qua interface.
+- `RateLimitService.cs`: kiểm tra rate limit theo chính sách cấu hình.
+- `OutboxService.cs`: thêm/cập nhật bản ghi Outbox phục vụ outbox pattern.
+- `OutboxPublisher.cs`: đọc Outbox pending và publish ra queue/notification.
+- `OutboxPurgeService.cs`, `OutboxPurgeOptions.cs`: dọn Outbox đã xử lý theo thời gian giữ.
+- `ReconciliationService.cs`: đối chiếu tính nhất quán Order/Outbox.
+- `ExponentialBackoffPolicy.cs`: tính toán delay retry cho xử lý message.
+- `MetricService.cs`: tổng hợp/định dạng dữ liệu metric.
 
 ## Quy tắc
-
-- Service chỉ orchestrate Domain Service và Repository, không chứa business logic phức tạp.
-- Không dùng `DbContext` trực tiếp trong Application.
+- Service orchestrate dependency qua interface; không truy cập trực tiếp hạ tầng cụ thể.
+- Giữ transaction boundary rõ ràng khi liên quan `Order` + `Outbox`.
+- Không hardcode secret/cấu hình nhạy cảm.

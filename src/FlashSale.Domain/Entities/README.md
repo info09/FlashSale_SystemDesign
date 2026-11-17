@@ -1,18 +1,17 @@
-# Folder: Entities (Domain)
+# Entities (FlashSale.Domain)
 
-Chứa các entity nghiệp vụ (domain entity) của hệ thống Flash Sale.
+Chứa các domain entity của hệ thống Flash Sale.
 
-| File | Chức năng |
-|------|-----------|
-| `Order.cs` | Entity đơn hàng (Order), lưu thông tin đơn hàng trong PostgreSQLPrimary. |
-| `Outbox.cs` | Entity Outbox, lưu sự kiện trong Transactional Outbox Pattern (FR-04, NFR-06). |
-| `Inventory.cs` | Entity tồn kho, lưu trạng thái inventory trên Redis. |
-| `RateLimit.cs` | Entity trạng thái rate limit của client trên Redis. |
-| `User.cs` | Entity người dùng (ASP.NET Core Identity). |
-| `Role.cs` | Entity vai trò (ASP.NET Core Identity). |
-| `ReconciliationResult.cs` | Kết quả quy trình Reconciliation (đối chiếu Order/Outbox, NFR-06). |
+## Entity tiêu biểu
+- `Order.cs`: đơn hàng được tạo/xử lý trong luồng flash sale.
+- `Outbox.cs`: bản ghi sự kiện cho Transactional Outbox Pattern.
+- `Inventory.cs`: trạng thái/tồn kho sản phẩm.
+- `RateLimit.cs`: trạng thái giới hạn tần số.
+- `User.cs`, `Role.cs`: thực thể phục vụ Identity/auth.
+- `HealthResult.cs`: kết quả kiểm tra sức khỏe thành phần.
+- `Metric.cs`: dữ liệu/chỉ số quan sát.
+- `ReconciliationResult.cs`: kết quả đối chiếu nhất quán dữ liệu.
 
 ## Quy tắc
-
-- Entity KHÔNG chứa thuộc tính navigation phức tạp.
-- Tên entity phải trùng thuật ngữ chuẩn trong `docs/domain-glossary.md`.
+- Đặt tên theo `docs/domain-glossary.md`, tránh synonym (`Stock`, `Dlq`, ...).
+- Giữ entity độc lập với hạ tầng và framework persistence.

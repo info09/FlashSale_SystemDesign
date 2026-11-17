@@ -1,12 +1,11 @@
-# Folder: Events (Inventory)
+# Events — Inventory (Application/Features)
 
-Chứa các message contract (sự kiện) của tính năng Kho hàng (Inventory) trong Application layer.
+Chứa message contract/sự kiện liên quan luồng đặt hàng/tồn kho.
 
-| File | Chức năng |
-|------|-----------|
-| `OrderCreatedMessage.cs` | Message contract cho sự kiện Order được tạo thành công (có CorrelationId, MessageId, OccurredOn, Payload). |
+## File
+- `OrderCreatedMessage.cs`: contract message khi đơn được tạo/được publish vào pipeline (bao gồm định danh, thời gian, payload cần thiết).
 
 ## Quy tắc
-
-- Mỗi message phải có: `CorrelationId` (Guid), `MessageId` (Guid), `OccurredOn` (DateTimeOffset), `Payload` (object).
-- Không chứa secret, PII, mật khẩu trong message payload.
+- Message phải có thông tin truy vết cần thiết (ví dụ `CorrelationId`, `MessageId`, `OccurredOn`) theo convention dự án.
+- Không đưa secret/PII không cần thiết vào payload.
+- Tên/ý nghĩa bám `docs/domain-glossary.md` (`Order`, `OrderPipeline`, `Message`).

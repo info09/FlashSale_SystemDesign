@@ -1,20 +1,15 @@
-# Folder: Interfaces (Domain)
+# Interfaces (FlashSale.Domain)
 
-Chứa các giao diện repository của Domain layer. Không chứa implementation chi tiết EF Core.
+Chứa abstraction cho truy cập dữ liệu và thành phần cần thiết của domain.
 
-| File | Chức năng |
-|------|-----------|
-| `IOrderRepository.cs` | Giao diện thao tác Order trong kho dữ liệu (PostgreSQLPrimary). |
-| `IOutboxRepository.cs` | Giao diện thao tác Outbox trong kho dữ liệu (PostgreSQLPrimary). |
-| `IReconciliationRepository.cs` | Giao diện truy vấn OrderId và Outbox cho quy trình Reconciliation (NFR-06). |
-| `IUnitOfWork.cs` | Giao diện quản lý transaction PostgreSQLPrimary (Transactional Outbox Pattern). |
-| `IInventoryRepository.cs` | Giao diện thao tác Inventory trên Redis. |
-| `IRateLimitRepository.cs` | Giao diện thao tác RateLimit trên Redis. |
-| `IUserRepository.cs` | Giao diện thao tác User (ASP.NET Core Identity). |
-| `IUserService.cs` | Giao diện dịch vụ người dùng (Identity). |
-| `IJwtTokenService.cs` | Giao diện dịch vụ ký JWT token. |
+## Interface tiêu biểu
+- `IOrderRepository.cs`, `IOutboxRepository.cs`: thao tác Order/Outbox.
+- `IInventoryRepository.cs`, `IRateLimitRepository.cs`: thao tác trạng thái Inventory/RateLimit.
+- `IUserRepository.cs`, `IUserService.cs`, `IJwtTokenService.cs`: phục vụ Identity/JWT.
+- `IUnitOfWork.cs`: quản lý transaction nhất quán.
+- `IReconciliationRepository.cs`: hỗ trợ đối chiếu dữ liệu.
+- `IDatabaseConnectionChecker.cs`: kiểm tra kết nối cơ sở dữ liệu.
 
 ## Quy tắc
-
-- Repository Interface trong `Domain/Interfaces/` KHÔNG chứa implementation chi tiết EF Core.
-- Không dùng `DbContext`, `DbSet`, Entity Framework trong Domain.
+- Chỉ định nghĩa contract; không phụ thuộc EF Core, Redis, RabbitMQ hay framework cụ thể.
+- Tên/semantics bám `docs/domain-glossary.md`.

@@ -1,16 +1,16 @@
-# Folder: Redis (Infrastructure/ExternalServices)
+# Redis (FlashSale.Infrastructure/ExternalServices)
 
-Chứa các dịch vụ tương tác với Redis (RateLimit, Inventory, Lua Script).
+Triển khai tích hợp Redis cho RateLimit và Inventory bằng thao tác nguyên tử.
 
-| File | Chức năng |
-|------|-----------|
-| `RedisRateLimitService.cs` | Implementation `IRateLimitRepository`, kiểm tra rate limit qua Redis Lua Script TokenBucket (FR-01). |
-| `RedisInventoryService.cs` | Dịch vụ trừ kho atomic trên Redis qua Lua Script (FR-02). |
-| `RedisScriptExecutor.cs` | Thực thi Lua Script trên Redis (abstraction qua StackExchange.Redis). |
-| `IRedisScriptExecutor.cs` | Giao diện thực thi Lua Script trên Redis. |
-| `Scripts/` | Chứa các file `.lua` (rate_limit_token_bucket.lua, atomic_inventory_deduct.lua). |
+## Thành phần
+- `RedisRateLimitService.cs`: kiểm tra RateLimit (Token Bucket) qua Lua script.
+- `RedisInventoryService.cs`: trừ/thêm/đọc tồn kho atomic qua Lua script.
+- `RedisScriptExecutor.cs`, `IRedisScriptExecutor.cs`: thực thi script Redis.
+- `Scripts/`: Lua scripts
+  - `rate_limit_token_bucket.lua`
+  - `atomic_inventory_deduct.lua`
 
 ## Quy tắc
-
-- Dùng `StackExchange.Redis` cho Redis (theo Convention 3.14).
-- Lua script phải nguyên tử (atomic), không chia thành nhiều lệnh Redis riêng lẻ.
+- Dùng `StackExchange.Redis` và thao tác atomic khi cạnh tranh cao.
+- Không chia logic cần atomic thành nhiều lệnh Redis rời rạc nếu script đáp ứng được.
+- Cấu hình kết nối Redis lấy từ environment/config.

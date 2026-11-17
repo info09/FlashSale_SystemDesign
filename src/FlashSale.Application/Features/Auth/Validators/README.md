@@ -1,13 +1,11 @@
-# Folder: Validators (Auth)
+# Validators — Auth (Application/Features)
 
-Chứa các Validator của tính năng Xác thực (Auth) trong Application layer.
+Chứa FluentValidation validators cho command Auth.
 
-| File | Chức năng |
-|------|-----------|
-| `LoginCommandValidator.cs` | Validator cho LoginCommand. |
-| `RegisterCommandValidator.cs` | Validator cho RegisterCommand. |
+## File
+- `LoginCommandValidator.cs`: validate dữ liệu đăng nhập.
+- `RegisterCommandValidator.cs`: validate dữ liệu đăng ký.
 
 ## Quy tắc
-
-- Validator dùng FluentValidation.
-- Tên Validator phải hậu tố `Validator` theo Convention 1.2.
+- Kiểm tra input sớm, thông báo lỗi rõ ràng.
+- Tên hậu tố `Validator`.

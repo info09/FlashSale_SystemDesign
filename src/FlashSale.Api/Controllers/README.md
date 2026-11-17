@@ -1,17 +1,17 @@
-# Folder: Controllers (Api)
+# Controllers (FlashSale.Api)
 
-Chứa các Controller của API layer. Tham chiếu `FlashSale.Application` + `FlashSale.Infrastructure`.
+Chứa API controllers, chỉ nhận request/validate cơ bản ở tầng HTTP, gọi Application/Infrastructure service và trả response.
 
-| File | Chức năng |
-|------|-----------|
-| `FlashSaleController.cs` | Endpoint mua hàng (`/api/v1/flash-sale/buy`), trả HTTP 202 Accepted (FR-03). |
-| `InventoryController.cs` | Endpoint kiểm tra/trừ kho (`/api/v1/inventory/...`, FR-02). |
-| `AuthController.cs` | Endpoint đăng ký/đăng nhập (`/api/v1/auth/register`, `/api/v1/auth/login`). |
-| `OutboxController.cs` | Endpoint purge Outbox (`/api/v1/outbox/purge`, bảo vệ `[Authorize]`, NFR-06). |
+## Controllers hiện có
+- `AuthController.cs`: đăng ký, đăng nhập, cấp JWT.
+- `FlashSaleController.cs`: endpoint mua hàng flash sale, trừ kho và publish pipeline, trả `202 Accepted`.
+- `InventoryController.cs`: kiểm tra/trừ/thêm tồn kho (tùy action triển khai).
+- `HealthController.cs`: endpoint health check dịch vụ/phụ thuộc.
+- `MetricsController.cs`: endpoint metrics dạng Prometheus text.
+- `OutboxController.cs`: endpoint purge Outbox (có bảo vệ auth).
 
 ## Quy tắc
-
-- Controller KHÔNG chứa business logic, chỉ nhận request, gọi Service/MediatR, trả response.
-- Controller KHÔNG gọi trực tiếp DbContext, Redis, RabbitMQ. Gọi qua Application Service hoặc MediatR.
-- Mỗi action phải có `[ProducesResponseType]` cho status code chính.
-- Route dùng kebab-case (Convention 1.6).
+- Không chứa business logic phức tạp; orchestrate qua service/handler.
+- Không truy cập trực tiếp DbContext/Redis/RabbitMQ.
+- Khai báo `[ProducesResponseType]`, route/thuật ngữ đúng `docs/domain-glossary.md`.
+- Endpoint cần bảo vệ phải dùng `[Authorize]` và JWT Bearer hợp lệ.

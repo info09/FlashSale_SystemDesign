@@ -1,92 +1,75 @@
 # FlashSale Engine — Backend API Core & Pipeline
 
-Hệ thống Flash Sale distribuído, sự kiện-driven, chống over-selling, không mất đơn hàng, p99 latency dưới 20ms trên luồng nhận đơn.
+Hệ thống Flash Sale phân tán, event-driven, chống over-selling, không mất đơn đã nhận `202 Accepted`, tối ưu fast-path nhận đơn.
 
 ## Tech stack
-
-- .NET 8, ASP.NET Core
-- Clean Architecture + CQRS
-- PostgreSQL Primary (ghi Order + Outbox)
-- Redis (RateLimit TokenBucket, Inventory atomic qua Lua Script)
-- RabbitMQ (OrderPipeline, DeadLetterQueue, OrderNotification)
+- .NET 8, ASP.NET Core, .NET Background Service
+- Clean Architecture + CQRS-style features
+- PostgreSQL Primary (Order, Outbox, Identity) + EF Core migrations
+- Redis (RateLimit Token Bucket, Inventory atomic) + Lua Script
+- RabbitMQ (OrderPipeline, DLQ, OrderNotification)
+- ASP.NET Core Identity + JWT Bearer
+- Serilog, Swagger/OpenAPI
+- Prometheus/Grafana (metrics/health observability)
 - Docker + Docker Compose
-- xUnit, FluentAssertions, Moq, Testcontainers
-- k6 (load test 8.000 VUs)
+- xUnit, FluentAssertions, Moq, Testcontainers, k6
 
 ## Cấu trúc solution
 
-### src/FlashSale.Domain
+### `src/FlashSale.Domain`
+Layer lõi, không phụ thuộc layer khác.
+- `Entities/`: `Order`, `Outbox`, `Inventory`, `RateLimit`, `User`, `Role`, `HealthResult`, `Metric`, `ReconciliationResult`, ...
+- `Interfaces/`: repository/service abstractions (`IOrderRepository`, `IOutboxRepository`, `IInventoryRepository`, `IRateLimitRepository`, `IUserRepository`, `IUnitOfWork`, `IReconciliationRepository`, `IDatabaseConnectionChecker`, ...)
+- `Exceptions/`: `InsufficientInventoryException`, `RateLimitExceededException`, `DeadLetterQueueException`
+- `RabbitMqConstants.cs`: tên Exchange/Queue/Routing Key chuẩn
 
-Layer Domain. Không tham chiếu layer nào khác.
+### `src/FlashSale.Application`
+Orchestration/use-case, chỉ phụ thuộc Domain.
+- `Interfaces/`: `IOrderService`, `IInventoryService`, `IOutboxService`, `IOutboxPublisher`, `IOutboxPurgeService`, `IReconciliationService`, `IRabbitMqPublisherService`, `IRateLimitService`, `IMetricService`, `IMetricCollector`, ...
+- `Services/`: `OrderService`, `OutboxService`, `OutboxPublisher`, `OutboxPurgeService`, `ReconciliationService`, `InventoryService`, `RateLimitService`, `MetricService`, `ExponentialBackoffPolicy`, `OutboxPurgeOptions`, ...
+- `Features/`: `Auth`, `Inventory`, `RateLimit` (Commands/CommandHandlers/Validators/Events)
+- `DependencyInjection.cs`
 
-- `Entities/`: Order, Outbox, Order, v.v.
-- `Exceptions/`: DeadLetterQueueException, InsufficientInventoryException, RateLimitExceededException.
-- `Interfaces/`: IOrderRepository, IOutboxRepository, IReconciliationRepository, IUnitOfWork.
-- `RabbitMqConstants.cs`: tên Exchange/Queue/Routing Key chuẩn.
+### `src/FlashSale.Infrastructure`
+Triển khai hạ tầng, phụ thuộc Domain + Application.
+- `Persistence/`: `PostgreSQLPrimaryContext`, repositories, `UnitOfWork`, `AuthService`, `JwtTokenService`, `HealthCheckService`, `MetricCollector`, `AdminSeeder`, `Migrations/`
+- `ExternalServices/Redis/`: `RedisRateLimitService`, `RedisInventoryService`, `RedisScriptExecutor`, `Scripts/*.lua`
+- `ExternalServices/RabbitMQ/`: `RabbitMqPublisherService`
+- `DependencyInjection.cs`: đăng ký PostgreSQL/Identity, Redis, RabbitMQ, repositories, services
 
-### src/FlashSale.Application
+### `src/FlashSale.Api`
+HTTP API, phụ thuộc Application + Infrastructure.
+- `Controllers/`: `AuthController`, `FlashSaleController`, `InventoryController`, `HealthController`, `MetricsController`, `OutboxController`
+- `Middleware/`: `RateLimitMiddleware`, `ExceptionHandlerMiddleware`
+- `Program.cs`: Serilog, DI, JWT Bearer, Swagger, HTTPS redirect (non-dev), auth/rate-limit pipeline, EF migrate + seed
 
-Layer Application. Chỉ tham chiếu Domain.
+### `src/FlashSale.Worker`
+Async worker, phụ thuộc Application + Infrastructure.
+- `Consumers/`: `OrderCreatedConsumerService`, `OrderNotificationConsumerService`
+- `Services/`: `Worker`, `OutboxPublisherWorkerService`, `OutboxPurgeWorkerService`, `OrderNotificationWorkerService`, `MetricWorkerService`, `MetricEndpointService`
+- `Program.cs`: DI, RabbitMQ connection/channel, hosted services, metrics endpoint
 
-- `Interfaces/`: IOrderService, IInventoryService, IOutboxService, IOutboxPublisher, IReconciliationService, IOutboxPurgeService, IRabbitMqPublisherService.
-- `Services/`: OrderService, OutboxService, OutboxPublisher, OutboxPurgeService, ReconciliationService, ExponentialBackoffPolicy, OutboxPurgeOptions.
-- `Features/`: Auth, Inventory, RateLimit (Commands, CommandHandlers, Validators, Events).
-- `DependencyInjection.cs`: đăng ký dịch vụ Application.
+### `tests/`
+- `FlashSale.Domain.Tests`, `FlashSale.Application.Tests`, `FlashSale.Infrastructure.Tests`, `FlashSale.Api.Tests`, `FlashSale.Worker.Tests`
+- `Integration.Tests`: luồng end-to-end với Testcontainers (PostgreSQL/Redis/RabbitMQ)
 
-### src/FlashSale.Infrastructure
+## Luồng chính
+- **Auth:** `POST /api/v1/auth/register`, `POST /api/v1/auth/login` (JWT Bearer).
+- **Rate limit (FR-01):** `RateLimitMiddleware` kiểm tra Redis Token Bucket trước xử lý tiếp.
+- **Inventory (FR-02):** trừ kho atomic trên Redis qua Lua script, hết kho không tạo đơn.
+- **Mua hàng (FR-03):** `POST /api/v1/flash-sale/buy` trừ kho + publish message vào `order_pipeline_queue` + trả `202 Accepted`.
+- **Xử lý async/Outbox (FR-04, FR-05):** Worker consume message, ghi `Order` + `Outbox` trong cùng transaction PostgreSQL, retry exponential backoff, DLQ sau 3 lần; có publish outbox pending và notification downstream.
+- **Observability (FR-06):** `GET /api/v1/health`, `GET /api/v1/metrics`; Worker expose metrics cho Prometheus scrape.
 
-Layer Infrastructure. Tham chiếu Domain + Application.
+## Chạy dự án
+1. Tạo `.env` từ `.env.example` và điền giá trị.
+2. Khởi chạy hạ tầng/app: `docker-compose up -d`
+3. Build: `dotnet build FlashSale.sln -c Release`
+4. Test: `dotnet test FlashSale.sln -c Release`
 
-- `Persistence/`: PostgreSQLPrimaryContext, OrderRepository, OutboxRepository, ReconciliationRepository, UnitOfWork, Migrations.
-- `ExternalServices/RabbitMQ/`: RabbitMqPublisherService.
-- `ExternalServices/Redis/`: RedisRateLimitService, RedisInventoryService, RedisScriptExecutor, Scripts.
-- `DependencyInjection.cs`: đăng ký dịch vụ Infrastructure.
+API mặc định: `http://localhost:8080` (theo compose). Worker metrics: `http://localhost:8081/api/v1/metrics`.
 
-### src/FlashSale.Api
-
-Layer API. Tham chiếu Application + Infrastructure.
-
-- `Controllers/`: FlashSaleController, InventoryController, AuthController, OutboxController.
-- `Middleware/`: RateLimitMiddleware, ExceptionHandlerMiddleware.
-- `Program.cs`: cấu hình host, authentication, middleware, migration seed.
-- `appsettings.json`, `appsettings.Development.json`.
-
-### src/FlashSale.Worker
-
-Async Worker (.NET Background Service). Tham chiếu Application + Infrastructure.
-
-- `Consumers/`: OrderCreatedConsumerService, OrderNotificationConsumerService.
-- `Services/`: Worker, OutboxPurgeWorkerService, OutboxPublisherWorkerService.
-- `Program.cs`: cấu hình host, RabbitMQ connection/channel, DI, BackgroundService.
-
-### tests/
-
-- `FlashSale.Domain.Tests/`: unit test Domain.
-- `FlashSale.Application.Tests/`: unit test Application (OrderService, ReconciliationService, OutboxPurgeService).
-- `FlashSale.Infrastructure.Tests/`: integration test Infrastructure (Testcontainers PostgreSQL, Redis, RabbitMQ).
-- `FlashSale.Api.Tests/`: unit test API.
-- `FlashSale.Worker.Tests/`: unit test Worker (Worker, OutboxPurgeWorkerService, OutboxPublisherWorkerService, OrderNotificationConsumerService).
-- `Integration.Tests/`: end-to-end test toàn bộ luồng (Testcontainers).
-
-## Quy tắc đặt tên
-
-Mọi tên class, bảng, cột, queue, exchange, routing key phải trùng thuật ngữ chuẩn trong `docs/domain-glossary.md`. Không được dùng từ đồng nghĩa (ví dụ: không gọi `Stock`, `Dlq`, `GatewayController`).
-
-## Cách chạy
-
-1. Copy `.env.example` thành `.env`, điền giá trị thật.
-2. `docker-compose up -d` để khởi tạo toàn bộ dịch vụ.
-3. `dotnet build FlashSale.sln -c Release` để build.
-4. `dotnet test FlashSale.sln -c Release` để chạy toàn bộ test.
-
-## Quy tắc commit
-
-- Không tự ý commit.
-- Commit message theo convention: `{type}: {ma-FR} {mo-ta}` (ví dụ: `feat: FR-04 implement OrderService`).
-- Loại commit: feat, fix, docs, style, refactor, test, chore, ci.
-
-## Gợi ý cải tiến
-
-- Thêm `OutboxPublisherWorkerService` đã chạy mỗi 30 giây. Có thể giảm interval nếu cần publish gần real-time.
-- Thêm reconciliation chạy định kỳ (hiện có service, cần scheduler hoặc gọi thủ công qua API nếu có).
-- Thêm HealthCheck endpoint và Prometheus/Grafana (Phase 5, chưa triển khai).
+## Quy ước
+- Tên class/bảng/cột/queue/exchange/routing key phải theo `docs/domain-glossary.md`.
+- Không commit tự ý; commit theo `{type}: {ma-FR} {mo-ta}` khi được yêu cầu.
+- Ưu tiên đọc `docs/status.md`, `docs/architecture.md`, `docs/decisions.md` để nắm tiến độ và quyết định hiện tại.

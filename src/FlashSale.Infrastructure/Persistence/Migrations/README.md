@@ -1,15 +1,14 @@
-# Folder: Migrations (Infrastructure/Persistence)
+# Migrations (FlashSale.Infrastructure/Persistence)
 
-Chứa các migration file của Entity Framework Core cho PostgreSQLPrimary.
+Chứa EF Core migrations cho `PostgreSQLPrimaryContext`.
 
-| File | Chức năng |
-|------|-----------|
-| `20261105005114_CreateIdentityTables.cs` | Tạo bảng User, Role (ASP.NET Core Identity, Up/Down reversible). |
-| `20261105043932_CreateOrdersTable.cs` | Tạo bảng Order (Id, ProductId, Quantity, ClientId, OrderStatus, CreatedOn, Up/Down reversible). |
-| `20261105082943_CreateOutbox_Table.cs` | Tạo bảng Outbox (Up/Down reversible, có index ProcessingStatus/OccurredOn). |
-| `PostgreSQLPrimaryContextModelSnapshot.cs` | Snapshot model của DbContext cho EF Core. |
+## Migrations hiện có
+- `20261105005114_CreateIdentityTables.*`: tạo bảng Identity (User/Role và liên quan).
+- `20261105043932_CreateOrdersTable.*`: tạo bảng `Order`.
+- `20261105082943_CreateOutbox_Table.*`: tạo bảng `Outbox` (kèm index phục vụ xử lý/purge theo thiết kế).
+- `PostgreSQLPrimaryContextModelSnapshot.cs`: snapshot model hiện tại.
 
 ## Quy tắc
-
-- Tên migration file theo format `{Timestamp}_{MucDich}.cs` (Convention 1.1).
-- Mỗi migration phải có Up/Down reversible.
+- Tên migration theo format `{Timestamp}_{Purpose}`.
+- Mỗi migration cần có `Up/Down` reversible.
+- Thay đổi schema phải đồng bộ với entity/config và được kiểm thử phù hợp.

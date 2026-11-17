@@ -1,25 +1,19 @@
 # FlashSale.Domain
 
-Layer Domain của hệ thống Flash Sale. Không tham chiếu bất kỳ layer nào khác. Nguồn sự thật duy nhất về ngôn ngữ chung (Ubiquitous Language).
+Layer Domain: mô hình nghiệp vụ cốt lõi, exception, interface trừu tượng. Không phụ thuộc layer khác và không dùng EF Core/Redis/RabbitMQ trực tiếp.
 
-## Cấu trúc
-
-| Thư mục | Mô tả |
-|---------|-------|
-| `Entities/` | Order, Outbox, ReconciliationResult |
-| `Exceptions/` | DeadLetterQueueException, InsufficientInventoryException, RateLimitExceededException |
-| `Interfaces/` | IOrderRepository, IOutboxRepository, IReconciliationRepository, IUnitOfWork |
-| `RabbitMqConstants.cs` | Tên Exchange/Queue/Routing Key chuẩn (dùng cho cả Application và Infrastructure) |
+## Thành phần
+- `Entities/`: thực thể nghiệp vụ như `Order`, `Outbox`, `Inventory`, `RateLimit`, `User`, `Role`, `HealthResult`, `Metric`, `ReconciliationResult`, ...
+- `Interfaces/`: abstraction cho repository/unit of work/dịch vụ hạ tầng cần thiết (`IOrderRepository`, `IOutboxRepository`, `IInventoryRepository`, `IRateLimitRepository`, `IUserRepository`, `IUnitOfWork`, `IReconciliationRepository`, `IDatabaseConnectionChecker`, ...)
+- `Exceptions/`: `InsufficientInventoryException`, `RateLimitExceededException`, `DeadLetterQueueException`, ...
+- `RabbitMqConstants.cs`: hằng số Exchange/Queue/Routing Key chuẩn dùng xuyên solution
 
 ## Quy tắc
+- Tên và ngữ nghĩa phải tuân thủ `docs/domain-glossary.md`.
+- Entity tập trung bất biến/nghiệp vụ; không chứa phụ thuộc hạ tầng.
+- Interface không lộ chi tiết triển khai (EF, driver cụ thể).
 
-- Entity KHÔNG chứa thuộc tính navigation phức tạp.
-- Repository Interface KHÔNG chứa implementation chi tiết EF Core.
-- Không dùng `DbContext`, `DbSet`, Entity Framework trong Domain.
-- Tên class, exception, repository phải trùng thuật ngữ trong `docs/domain-glossary.md`.
-
-## Cách chạy test
-
+## Test
 ```bash
 dotnet test tests/FlashSale.Domain.Tests -c Release
 ```

@@ -1,26 +1,24 @@
 # FlashSale.Application
 
-Layer Application của hệ thống Flash Sale. Chứa logic nghiệp vụ, CQRS (Command, Validator), dịch vụ ứng dụng. Chỉ tham chiếu `FlashSale.Domain`.
+Layer Application: điều phối use-case nghiệp vụ, command/validator/event theo feature, định nghĩa abstraction cho hạ tầng. Chỉ phụ thuộc `FlashSale.Domain`.
 
-## Cấu trúc
-
-| Thư mục | Mô tả |
-|---------|-------|
-| `Interfaces/` | Giao diện dịch vụ (IOrderService, IInventoryService, IOutboxService, IOutboxPublisher, IReconciliationService, IOutboxPurgeService, IRabbitMqPublisherService) |
-| `Services/` | OrderService, OutboxService, OutboxPublisher, OutboxPurgeService, ReconciliationService, ExponentialBackoffPolicy, OutboxPurgeOptions |
-| `Features/Auth/` | LoginCommand, RegisterCommand, handlers, validators |
-| `Features/Inventory/` | DeductInventoryCommand, OrderCreatedMessage |
-| `Features/RateLimit/` | RateLimitCommand, validators |
-| `DependencyInjection.cs` | Đăng ký dịch vụ Application |
+## Thành phần chính
+- `Interfaces/`: contract dịch vụ/repository integration (`IOrderService`, `IInventoryService`, `IRateLimitService`, `IOutboxService`, `IOutboxPublisher`, `IOutboxPurgeService`, `IReconciliationService`, `IRabbitMqPublisherService`, `IMetricService`, `IMetricCollector`, ...)
+- `Services/`: triển khai nghiệp vụ/orchestration
+  - `OrderService`: tạo Order + ghi Outbox trong transaction (Transactional Outbox Pattern)
+  - `InventoryService`, `RateLimitService`
+  - `OutboxService`, `OutboxPublisher`, `OutboxPurgeService`, `OutboxPurgeOptions`
+  - `ReconciliationService`, `ExponentialBackoffPolicy`, `MetricService`
+- `Features/`: tổ chức theo module `Auth`, `Inventory`, `RateLimit`
+  - `Commands/`, `CommandHandlers/`, `Validators/`, `Events/` (tùy module)
+- `DependencyInjection.cs`: đăng ký service/validator của Application
 
 ## Quy tắc
+- Không phụ thuộc trực tiếp EF Core DbContext, Redis client, RabbitMQ client; làm việc qua interface.
+- Logic nghiệp vụ cốt lõi ưu tiên đặt ở Domain/service phù hợp; handler/service tầng này tập trung orchestrate.
+- Validator dùng FluentValidation, tên/thuật ngữ theo `docs/domain-glossary.md`.
 
-- Không chứa `DbContext`, Redis, RabbitMQ trực tiếp. Phải qua Repository Interface.
-- Validator dùng FluentValidation, đặt trong `Features/{Tên}/Validators/`.
-- Command/Query Handler chỉ orchestrate Domain Service và Repository.
-
-## Cách chạy test
-
+## Test
 ```bash
 dotnet test tests/FlashSale.Application.Tests -c Release
 ```

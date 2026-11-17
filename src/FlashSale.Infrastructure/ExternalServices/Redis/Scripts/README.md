@@ -1,14 +1,12 @@
-# Folder: Scripts (Infrastructure/ExternalServices/Redis)
+# Redis Scripts (FlashSale.Infrastructure/ExternalServices/Redis)
 
-Chứa các file Lua Script chạy trên Redis để thực thi thao tác nguyên tử (atomic).
+Chứa Lua scripts chạy trên Redis để đảm bảo thao tác nguyên tử.
 
-| File | Chức năng |
-|------|-----------|
-| `rate_limit_token_bucket.lua` | Script TokenBucket cho Rate Limit (FR-01, NFR-04). |
-| `atomic_inventory_deduct.lua` | Script trừ kho atomic cho AtomicInventoryOffloading (FR-02, NFR-01). |
+## Scripts
+- `rate_limit_token_bucket.lua`: thuật toán Token Bucket cho RateLimit.
+- `atomic_inventory_deduct.lua`: trừ tồn kho nguyên tử, ngăn over-selling.
 
 ## Quy tắc
-
-- File `.lua` đặt trong `Infrastructure/ExternalServices/Redis/Scripts/`, tên snake_case (Convention 1.1).
-- Lua script phải nguyên tử (atomic), không chia thành nhiều lệnh Redis riêng lẻ.
-- Không dùng Lua script cho logic phức tạp > 50 dòng.
+- Script phải atomic và dễ kiểm thử.
+- Tên file snake_case, đúng mục đích nghiệp vụ.
+- Tránh nhúng logic quá phức tạp/dài; thay đổi script cần cập nhật test liên quan.

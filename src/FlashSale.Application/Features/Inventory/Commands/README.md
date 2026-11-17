@@ -1,12 +1,11 @@
-# Folder: Commands (Inventory)
+# Commands — Inventory (Application/Features)
 
-Chứa các Command của tính năng Kho hàng (Inventory) trong Application layer.
+Chứa command cho nghiệp vụ tồn kho.
 
-| File | Chức năng |
-|------|-----------|
-| `AddInventoryCommand.cs` | Command thêm tồn kho. |
-| `DeductInventoryCommand.cs` | Command trừ tồn kho (AtomicInventoryOffloading, FR-02). |
+## File
+- `AddInventoryCommand.cs`: yêu cầu thêm tồn kho.
+- `DeductInventoryCommand.cs`: yêu cầu trừ tồn kho (Atomic Inventory Offloading).
 
 ## Quy tắc
-
-- Tên Command phải hậu tố `Command` theo Convention 1.1.
+- Command chỉ mang dữ liệu; xử lý thực hiện ở handler/service.
+- Thuật ngữ theo `docs/domain-glossary.md` (`Inventory`, không dùng `Stock`).

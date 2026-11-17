@@ -1,13 +1,12 @@
-# Folder: Middleware (Api)
+# Middleware (FlashSale.Api)
 
-Chứa các Middleware của API layer.
+Chứa middleware cross-cutting cho API.
 
-| File | Chức năng |
-|------|-----------|
-| `RateLimitMiddleware.cs` | Kiểm tra RateLimit trước khi xử lý tiếp, trả HTTP 429 nếu vượt ngưỡng (FR-01, NFR-04). |
-| `ExceptionHandlerMiddleware.cs` | Bắt toan bộ exception, trả JSON lỗi chuẩn. |
+## Middleware hiện có
+- `ExceptionHandlerMiddleware.cs`: bắt exception, ghi log và trả response lỗi chuẩn.
+- `RateLimitMiddleware.cs`: kiểm tra giới hạn tần số request theo client (Redis Token Bucket), trả `429` khi vượt ngưỡng.
 
 ## Quy tắc
-
-- Middleware chỉ xử lý 관심 chung (cross-cutting concern), không chứa business logic.
-- RateLimitMiddleware chạy sau Authentication để lấy `ClientId` từ JWT.
+- Không nhúng business logic nghiệp vụ.
+- `RateLimitMiddleware` phải đặt sau `UseAuthentication()`/`UseAuthorization()` để đọc được identity/claims khi cần.
+- Dùng logging có cấu trúc (Serilog), không `Console.WriteLine`.

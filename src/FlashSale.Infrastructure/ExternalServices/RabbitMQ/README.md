@@ -1,12 +1,11 @@
-# Folder: RabbitMQ (Infrastructure/ExternalServices)
+# RabbitMQ (FlashSale.Infrastructure/ExternalServices)
 
-Chứa dịch vụ publish message vào RabbitMQ.
+Triển khai publish message sang RabbitMQ cho luồng đặt hàng và sự kiện downstream.
 
-| File | Chức năng |
-|------|-----------|
-| `RabbitMqPublisherService.cs` | Implementation `IRabbitMqPublisherService`, publish OrderCreatedMessage và message tuych chinh vào RabbitMQ Exchange/Queue. Khai báo Order Notification Exchange/Queue (downstream). |
+## Thành phần
+- `RabbitMqPublisherService.cs`: triển khai publish `OrderCreatedMessage` và message liên quan (exchange/queue/routing key theo `RabbitMqConstants`), hỗ trợ khai báo topology cần thiết.
 
 ## Quy tắc
-
-- Dùng `RabbitMQ.Client` trực tiếp (theo quyết định trong `docs/decisions.md`).
-- Không dùng MassTransit trong Phase 4 MVP.
+- Dùng `RabbitMQ.Client` theo quyết định kiến trúc hiện tại.
+- Tên exchange/queue/routing key phải khớp `FlashSale.Domain.RabbitMqConstants` và `docs/domain-glossary.md`.
+- Không hardcode connection string; lấy từ cấu hình/environment.

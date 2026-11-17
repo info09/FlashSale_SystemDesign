@@ -1,40 +1,30 @@
 # FlashSale.Api
 
-Layer API của hệ thống Flash Sale. Chịu trách nhiệm nhận request từ client, xác thực JWT, kiểm tra rate limit, xử lý mua hàng, purge Outbox.
+HTTP API của hệ thống Flash Sale. Nhận request, xác thực JWT, áp rate limit, xử lý mua hàng/tồn kho, health/metrics, và endpoint quản trị Outbox.
 
-## Thuộc thuộc vào
-
+## Phụ thuộc
 - `FlashSale.Application`
 - `FlashSale.Infrastructure`
 
-## Cấu trúc
+## Thành phần chính
+- `Controllers/`
+  - `AuthController.cs`: đăng ký/đăng nhập (`/api/v1/auth/...`)
+  - `FlashSaleController.cs`: mua hàng fast-path (`POST /api/v1/flash-sale/buy`, trả `202 Accepted`)
+  - `InventoryController.cs`: thao tác tồn kho (`/api/v1/inventory/...`)
+  - `HealthController.cs`: health check (`/api/v1/health`)
+  - `MetricsController.cs`: xuất metrics Prometheus (`/api/v1/metrics`)
+  - `OutboxController.cs`: purge Outbox (`/api/v1/outbox/purge`, bảo vệ `[Authorize]`)
+- `Middleware/`
+  - `ExceptionHandlerMiddleware.cs`: chuẩn hóa lỗi trả về
+  - `RateLimitMiddleware.cs`: kiểm tra RateLimit (FR-01, NFR-04), chạy sau Authentication
+- `Program.cs`: cấu hình Serilog, DI, JWT Bearer, Swagger, HTTPS redirect (non-dev), middleware pipeline, EF migrate + seed admin
 
-| Thư mục | Mô tả |
-|---------|-------|
-| `Controllers/` | FlashSaleController, InventoryController, AuthController, OutboxController |
-| `Middleware/` | RateLimitMiddleware, ExceptionHandlerMiddleware |
-| `Program.cs` | Cấu hình host, authentication, middleware, migration seed |
+## Lưu ý vận hành
+- Endpoint nghiệp vụ yêu cầu Bearer token (trừ health/root tùy cấu hình).
+- `RateLimitMiddleware` lấy `ClientId` từ claim người dùng đã xác thực.
+- Cấu hình qua environment variables (`POSTGRESQL_PRIMARY_CONNECTION_STRING`, `REDIS_CONNECTION_STRING`, `RABBITMQ_CONNECTION_STRING`, `JWT_*`, ...).
 
-## Endpoint chính
-
-| Phương thức | Đường dẫn | Mô tả |
-|-------------|-----------|-------|
-| POST | `/api/v1/auth/register` | Đăng ký người dùng |
-| POST | `/api/v1/auth/login` | Đăng nhập, nhận JWT |
-| POST | `/api/v1/flash-sale/buy` | Mua hàng (trả 202 Accepted) |
-| GET | `/api/v1/inventory/{productId}` | Kiểm tra tồn kho |
-| POST | `/api/v1/outbox/purge` | Purge Outbox (bảo vệ `[Authorize]`) |
-| GET | `/health` | Health check |
-
-## Cách chạy
-
+## Chạy local
 ```bash
 dotnet run --project src/FlashSale.Api/FlashSale.Api.csproj
 ```
-
-Cần cấu hình biến môi trường: `POSTGRESQL_PRIMARY_CONNECTION_STRING`, `REDIS_CONNECTION_STRING`, `RABBITMQ_CONNECTION_STRING`, `JWT_SECRET`, v.v. (xem `.env.example`).
-
-## Lưu ý
-
-- Tất cả endpoint bắt buộc HTTPS và Bearer Token (trừ `/health`, `/`).
-- RateLimitMiddleware chạy sau Authentication để lấy `ClientId` từ JWT.

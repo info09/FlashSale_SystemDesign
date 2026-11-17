@@ -1,15 +1,16 @@
 # FlashSale.Domain.Tests
 
-Unit test cho layer Domain.
+Unit tests cho `FlashSale.Domain`.
 
-## Cấu trúc
+## Phạm vi
+- Kiểm thử entity, invariant, exception và hành vi domain (`Order`, `Outbox`, `Inventory`, exceptions, ...).
 
-| File | Mô tả |
-|------|-------|
-| `Unit/` | Test các entity/domain exception (nếu có) |
-
-## Cách chạy
-
+## Chạy test
 ```bash
 dotnet test tests/FlashSale.Domain.Tests -c Release
 ```
+
+## Quy tắc
+- Test nhanh, không phụ thuộc hạ tầng ngoài.
+- Đặt tên theo `{MethodUnderTest}_{Scenario}_{ExpectedResult}` khi phù hợp.
+- Tuân theo AAA (Arrange-Act-Assert).

@@ -1,27 +1,25 @@
 # FlashSale.Infrastructure
 
-Layer Infrastructure của hệ thống Flash Sale. Tham chiếu `FlashSale.Domain` + `FlashSale.Application`.
+Layer Infrastructure: triển khai truy cập dữ liệu và tích hợp hệ thống ngoài (PostgreSQL, Redis, RabbitMQ, Identity/JWT). Phụ thuộc `FlashSale.Domain` + `FlashSale.Application`.
 
-## Cấu trúc
+## Thành phần
+- `Persistence/`
+  - `PostgreSQLPrimaryContext.cs`, repositories (`OrderRepository`, `OutboxRepository`, `UserRepository`, `ReconciliationRepository`), `UnitOfWork`
+  - `AuthService.cs`, `JwtTokenService.cs`, `HealthCheckService.cs`, `MetricCollector.cs`, `AdminSeeder.cs`, `ApplicationUser.cs`
+  - `Migrations/`: EF Core migrations cho Identity, Orders, Outbox
+- `ExternalServices/Redis/`
+  - `RedisRateLimitService.cs`, `RedisInventoryService.cs`, `RedisScriptExecutor.cs`, `IRedisScriptExecutor.cs`, `Scripts/*.lua`
+- `ExternalServices/RabbitMQ/`
+  - `RabbitMqPublisherService.cs`
+- `DependencyInjection.cs`: đăng ký DbContext/Identity, Redis, RabbitMQ, repositories, infrastructure services
 
-| Thư mục | Mô tả |
-|---------|-------|
-| `Persistence/` | PostgreSQLPrimaryContext, OrderRepository, OutboxRepository, ReconciliationRepository, UnitOfWork, Migrations |
-| `ExternalServices/RabbitMQ/` | RabbitMqPublisherService |
-| `ExternalServices/Redis/` | RedisRateLimitService, RedisInventoryService, RedisScriptExecutor, Scripts |
-| `DependencyInjection.cs` | Đăng ký dịch vụ Infrastructure |
+## Quy tắc
+- Mọi secret/cấu hình lấy từ environment/config, không hardcode.
+- Truy cập Redis dùng Lua script nguyên tử khi cần đảm bảo tính đúng trong cạnh tranh.
+- Tên bảng/queue/exchange/routing key theo `docs/domain-glossary.md`.
 
-## Các repository chính
-
-- `OrderRepository`: thao tác bảng Order (PostgreSQLPrimary).
-- `OutboxRepository`: thao tác bảng Outbox, bao gồm `PurgeProcessedOutboxesOlderThanAsync`.
-- `ReconciliationRepository`: truy vấn OrderId và Outbox cho quy trình Reconciliation.
-- `UnitOfWork`: quản lý transaction PostgreSQLPrimary (Transactional Outbox Pattern).
-
-## Cách chạy test
-
+## Test
 ```bash
 dotnet test tests/FlashSale.Infrastructure.Tests -c Release
 ```
-
-Yêu cầu Docker/Testcontainers cho PostgreSQL, Redis, RabbitMQ.
+(Thường cần Docker cho Testcontainers: PostgreSQL/Redis/RabbitMQ.)

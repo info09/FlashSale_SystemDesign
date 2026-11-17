@@ -1,18 +1,18 @@
-# Folder: Interfaces (Application)
+# Interfaces (FlashSale.Application)
 
-Chứa các giao diện dịch vụ của Application layer.
+Chứa các interface của Application layer cho service/use-case và điểm tích hợp hạ tầng.
 
-| File | Chức năng |
-|------|-----------|
-| `IOrderService.cs` | Giao diện dịch vụ Order (tạo đơn hàng). |
-| `IInventoryService.cs` | Giao diện dịch vụ Inventory (trừ kho atomic). |
-| `IOutboxService.cs` | Giao diện dịch vụ Outbox (quản lý ghi sự kiện vào bảng Outbox). |
-| `IOutboxPublisher.cs` | Giao diện dịch vụ xuất phat sự kiện Outbox ra RabbitMQ. |
-| `IOutboxPurgeService.cs` | Giao diện dịch vụ purge/archive bảng Outbox (NFR-06). |
-| `IReconciliationService.cs` | Giao diện dịch vụ Reconciliation (đối chiếu Order/Outbox, NFR-06). |
-| `IRabbitMqPublisherService.cs` | Giao diện dịch vụ publish message vào RabbitMQ. |
-| `IRateLimitService.cs` | Giao diện dịch vụ RateLimit. |
+## Interface tiêu biểu
+- `IOrderService.cs`: tạo/xử lý nghiệp vụ Order.
+- `IInventoryService.cs`: nghiệp vụ tồn kho (trừ/thêm/kiểm tra tùy triển khai).
+- `IRateLimitService.cs`: kiểm tra rate limit.
+- `IOutboxService.cs`: thao tác nghiệp vụ với Outbox.
+- `IOutboxPublisher.cs`: publish sự kiện Outbox ra messaging.
+- `IOutboxPurgeService.cs`: purge/archive Outbox đã xử lý.
+- `IReconciliationService.cs`: đối chiếu dữ liệu Order/Outbox.
+- `IRabbitMqPublisherService.cs`: publish message sang RabbitMQ.
+- `IMetricService.cs`, `IMetricCollector.cs`: thu thập/xuất metric (nếu có trong module).
 
 ## Quy tắc
-
-- Không chứa `DbContext` trực tiếp trong Application, phải qua Repository Interface.
+- Interface mô tả hành vi, không chứa implementation hay phụ thuộc hạ tầng cụ thể.
+- Tên và ngữ nghĩa bám `docs/domain-glossary.md` (Order, Outbox, Inventory, RateLimit, ...).
