@@ -19,7 +19,7 @@
 
   @if (errorMessage()) {
     <div class="alert error page-alert" role="alert">
-      <span class="alert-icon">!</span>
+      <span class="alert-icon" aria-hidden="true">!</span>
       <span>{{ errorMessage() }}</span>
     </div>
   }
@@ -193,7 +193,7 @@
 
           @if (purgeResult()) {
             <div class="alert" [class.success]="purgeResult()!.type === 'success'" [class.error]="purgeResult()!.type === 'error'" role="alert">
-              <span class="alert-icon">{{ purgeResult()!.type === 'success' ? '✓' : '!' }}</span>
+              <span class="alert-icon" aria-hidden="true">{{ purgeResult()!.type === 'success' ? '✓' : '!' }}</span>
               <span>{{ purgeResult()!.message }}</span>
             </div>
           }

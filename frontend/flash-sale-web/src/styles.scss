@@ -102,6 +102,45 @@ a {
   color: #16a34a;
 }
 
+:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.skip-link:focus-visible {
+  left: var(--space-md);
+  top: var(--space-md);
+  width: auto;
+  height: auto;
+  padding: var(--space-sm) var(--space-md);
+  background: #fff;
+  color: #052e16;
+  border-radius: 8px;
+  z-index: 2000;
+}
+
 ::selection {
   background: rgba(74, 222, 128, 0.22);
   color: #052e16;

@@ -25,7 +25,7 @@
     </ui-form-field>
 
     @if (errorMessage()) {
-      <div class="alert error" role="alert"><span class="alert-icon">!</span><span>{{ errorMessage() }}</span></div>
+      <div class="alert error" role="alert"><span class="alert-icon" aria-hidden="true">!</span><span>{{ errorMessage() }}</span></div>
     }
 
     <button class="btn primary" type="submit" [disabled]="loading()">

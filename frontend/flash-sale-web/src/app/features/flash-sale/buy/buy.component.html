@@ -36,7 +36,7 @@
     </ui-form-field>
 
     @if (formError()) {
-      <div class="alert error full-row" role="alert"><span class="alert-icon">!</span><span>{{ formError() }}</span></div>
+      <div class="alert error full-row" role="alert"><span class="alert-icon" aria-hidden="true">!</span><span>{{ formError() }}</span></div>
     }
 
     <div class="actions full-row">
@@ -61,7 +61,7 @@
       </div>
     } @else if (result(); as res) {
       <div class="alert" [class.success]="res.type === 'success'" [class.error]="res.type === 'error'" [class.warning]="res.type === 'warning'" [class.info]="res.type === 'info'" role="alert">
-        <span class="alert-icon">{{ res.type === 'success' ? '✓' : res.type === 'warning' ? '!' : res.type === 'error' ? '×' : 'i' }}</span>
+        <span class="alert-icon" aria-hidden="true">{{ res.type === 'success' ? '✓' : res.type === 'warning' ? '!' : res.type === 'error' ? '×' : 'i' }}</span>
         <div>
           <p class="result-message">{{ res.message }}</p>
           @if (res.orderId) {
@@ -71,7 +71,7 @@
       </div>
     } @else {
       <div class="empty-state">
-        <div class="empty-icon">🛒</div>
+        <div class="empty-icon" aria-hidden="true">🛒</div>
         <p>Chưa có yêu cầu mua hàng. Nhập thông tin và nhấn <strong>"Mua ngay"</strong>.</p>
       </div>
     }

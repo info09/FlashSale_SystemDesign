@@ -1,7 +1,8 @@
 <div class="app-shell">
+  <a class="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>
   <header class="app-header">
     <div class="brand-wrap">
-      <div class="brand-mark">⚡</div>
+      <div class="brand-mark" role="img" aria-label="Biểu tượng FlashSale">⚡</div>
       <div>
         <div class="brand">FlashSale</div>
         <div class="brand-sub">Mua nhanh • Quan sát hệ thống</div>
@@ -14,7 +15,7 @@
     </nav>
   </header>
 
-  <main class="app-main">
+  <main id="main-content" class="app-main" tabindex="-1">
     <router-outlet />
   </main>
 

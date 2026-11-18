@@ -64,9 +64,14 @@ input {
 
 input:hover { border-color: #34d399; }
 input:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--ring), none;
+  box-shadow: 0 0 0 4px var(--ring);
+}
+input:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--ring);
 }
 
 .alert {
@@ -112,12 +117,12 @@ input:focus {
 .btn.primary {
   color: #052e16;
   background: var(--gradient-primary);
-  box-shadow: 0 0 18px rgba(74, 222, 128, 0.18), 0 10px 20px rgba(34, 197, 94, 0.1);
+  box-shadow: 0 6px 14px rgba(34, 197, 94, 0.2);
 }
 
 .btn.primary:hover:not(:disabled) {
-  filter: brightness(1.04);
-  box-shadow: 0 0 24px rgba(74, 222, 128, 0.22), 0 12px 24px rgba(34, 197, 94, 0.12);
+  filter: brightness(1.03);
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.24);
 }
 
 .btn:active:not(:disabled) { transform: translateY(1px); }

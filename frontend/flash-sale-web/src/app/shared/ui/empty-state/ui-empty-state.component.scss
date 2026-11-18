@@ -44,3 +44,8 @@
 .ui-empty-action:hover {
   background: #d1d5db;
 }
+
+.ui-empty-action:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 2px;
+}

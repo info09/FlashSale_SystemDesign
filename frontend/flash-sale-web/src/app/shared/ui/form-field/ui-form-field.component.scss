@@ -34,7 +34,14 @@
 :host ::ng-deep input:focus,
 :host ::ng-deep select:focus,
 :host ::ng-deep textarea:focus {
-  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+:host ::ng-deep input:focus-visible,
+:host ::ng-deep select:focus-visible,
+:host ::ng-deep textarea:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 1px;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px var(--ring);
 }

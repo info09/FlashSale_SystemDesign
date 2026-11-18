@@ -73,7 +73,7 @@ h2 {
 
 .stat-chip.accent {
   color: #052e16;
-  background: linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,212,255,0.2));
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.18), rgba(134, 239, 172, 0.18));
   border-color: rgba(74, 222, 128, 0.22);
   box-shadow: none;
 }
@@ -83,7 +83,7 @@ h2 {
   height: 8px;
   border-radius: 50%;
   background: var(--color-primary);
-  box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.1), 0 0 10px rgba(57, 255, 20, 0.5);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.12);
 }
 
 .form-grid {
@@ -106,9 +106,14 @@ input {
 
 input:hover { border-color: #34d399; }
 input:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--ring), none;
+  box-shadow: 0 0 0 4px var(--ring);
+}
+input:focus-visible {
+  outline: 3px solid #166534;
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--ring);
 }
 
 .full-row { grid-column: 1 / -1; }
@@ -134,12 +139,12 @@ input:focus {
 .btn.primary {
   color: #052e16;
   background: var(--gradient-primary);
-  box-shadow: 0 0 18px rgba(74, 222, 128, 0.18), 0 10px 20px rgba(34, 197, 94, 0.1);
+  box-shadow: 0 6px 14px rgba(34, 197, 94, 0.2);
 }
 
 .btn.primary:hover:not(:disabled) {
-  filter: brightness(1.04);
-  box-shadow: 0 0 24px rgba(74, 222, 128, 0.22), 0 12px 24px rgba(34, 197, 94, 0.12);
+  filter: brightness(1.03);
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.24);
 }
 
 .btn.secondary {
@@ -217,11 +222,10 @@ input:focus {
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2.5px solid #a7f3d0;
+  border: 2.5px solid #bbf7d0;
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  box-shadow: 0 0 8px rgba(0,255,136,0.3);
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
