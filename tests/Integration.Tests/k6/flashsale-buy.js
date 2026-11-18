@@ -9,20 +9,34 @@ import { check, sleep } from 'k6';
 // - K6_EMAIL: email dùng khi register (mặc định: <username>@example.com)
 // - PRODUCT_ID: mã sản phẩm mua (mặc định: flashsale-product-1)
 // - QUANTITY: số lượng mua mỗi request (mặc định: 1)
-// - VUS: số VirtualUser đồng thời (mặc định: 8000)
-// - DURATION: thời gian chạy tải đồng thời (mặc định: 30s)
-// - SLEEP_SECONDS: nghỉ giữa các lần mua của mỗi VU (mặc định: 0.1)
+// - EXECUTOR: constant-vus (mặc định) | constant-arrival-rate | ramping-arrival-rate
+// - VUS: số VirtualUser đồng thời cho constant-vus (mặc định: 8000)
+// - DURATION: thời gian chạy (mặc định: 30s)
+// - RATE: số iteration/request bắt đầu mỗi timeUnit cho arrival-rate (vd 15000 cho Story 6.3)
+// - TIME_UNIT: đơn vị thời gian cho arrival-rate (mặc định: 1s)
+// - PREALLOCATED_VUS: VU cấp sẵn cho arrival-rate (mặc định: 2000)
+// - MAX_VUS: VU tối đa cho arrival-rate (mặc định: 15000)
+// - SLEEP_SECONDS: nghỉ giữa các lần mua của mỗi VU (mặc định: 0.1, dùng cho constant-vus)
+// - THRESHOLD_P99_MS: nếu đặt (vd 20), bật threshold p(99) http_req_duration (Story 6.2)
+// - THRESHOLD_HTTP_REQ_FAILED_RATE: ngưỡng http_req_failed rate (mặc định: 1)
+// - THRESHOLD_CHECKS_RATE: ngưỡng checks rate (vd 1 để yêu cầu không có 5xx ngoài 429, Story 6.3)
 
 const BASE_URL = __ENV.BASE_URL || 'http://flashsale-api:8080';
 const PRODUCT_ID = __ENV.PRODUCT_ID || 'flashsale-product-1';
 const QUANTITY = Number(__ENV.QUANTITY || 1);
+const EXECUTOR = __ENV.EXECUTOR || 'constant-vus';
 const VUS = Number(__ENV.VUS || 8000);
 const DURATION = __ENV.DURATION || '30s';
+const RATE = Number(__ENV.RATE || 15000);
+const TIME_UNIT = __ENV.TIME_UNIT || '1s';
+const PREALLOCATED_VUS = Number(__ENV.PREALLOCATED_VUS || 2000);
+const MAX_VUS = Number(__ENV.MAX_VUS || 15000);
 const SLEEP_SECONDS = Number(__ENV.SLEEP_SECONDS || 0.1);
 const THRESHOLD_P99_MS = __ENV.THRESHOLD_P99_MS ? Number(__ENV.THRESHOLD_P99_MS) : null;
 const THRESHOLD_HTTP_REQ_FAILED_RATE = __ENV.THRESHOLD_HTTP_REQ_FAILED_RATE
   ? Number(__ENV.THRESHOLD_HTTP_REQ_FAILED_RATE)
   : 1;
+const THRESHOLD_CHECKS_RATE = __ENV.THRESHOLD_CHECKS_RATE ? Number(__ENV.THRESHOLD_CHECKS_RATE) : null;
 
 const thresholds = {
   http_req_failed: [`rate<${THRESHOLD_HTTP_REQ_FAILED_RATE}`],
@@ -33,13 +47,45 @@ if (THRESHOLD_P99_MS !== null && !Number.isNaN(THRESHOLD_P99_MS)) {
   thresholds.http_req_duration = [`p(99)<${THRESHOLD_P99_MS}`];
 }
 
+// Story 6.3 (NFR-02): không chấp nhận 5xx do quá tải (ngoại 429) -> mọi response phải thuộc tập cho phép.
+if (THRESHOLD_CHECKS_RATE !== null && !Number.isNaN(THRESHOLD_CHECKS_RATE)) {
+  thresholds.checks = [`rate>=${THRESHOLD_CHECKS_RATE}`];
+}
+
+let scenario;
+if (EXECUTOR === 'constant-arrival-rate') {
+  scenario = {
+    executor: 'constant-arrival-rate',
+    rate: RATE,
+    timeUnit: TIME_UNIT,
+    duration: DURATION,
+    preAllocatedVUs: PREALLOCATED_VUS,
+    maxVUs: MAX_VUS,
+  };
+} else if (EXECUTOR === 'ramping-arrival-rate') {
+  scenario = {
+    executor: 'ramping-arrival-rate',
+    startRate: Number(__ENV.START_RATE || 0),
+    timeUnit: TIME_UNIT,
+    preAllocatedVUs: PREALLOCATED_VUS,
+    maxVUs: MAX_VUS,
+    stages: [
+      { target: RATE, duration: __ENV.RAMP_UP_DURATION || '10s' },
+      { target: RATE, duration: __ENV.HOLD_DURATION || DURATION },
+      { target: Number(__ENV.END_RATE || 0), duration: __ENV.RAMP_DOWN_DURATION || '10s' },
+    ],
+  };
+} else {
+  scenario = {
+    executor: 'constant-vus',
+    vus: VUS,
+    duration: DURATION,
+  };
+}
+
 export const options = {
   scenarios: {
-    flash_sale_buy: {
-      executor: 'constant-vus',
-      vus: VUS,
-      duration: DURATION,
-    },
+    flash_sale_buy: scenario,
   },
   thresholds,
 };
