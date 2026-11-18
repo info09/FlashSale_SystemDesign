@@ -202,4 +202,16 @@ Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con �
 - **Quyết định (Decision):** (1) **Bấm giữ chỗ:** kiểm tra Redis đủ quantity; không đủ trả lỗi hết hàng, đủ thì reserve/giữ chỗ 1 phút và hiển thị bảng nhập thông tin. (2) **Không submit trong 1 phút hoặc reload trang:** trả lại quantity trong Redis và nhường chỗ (qua hết hạn/release, `FlashSale.WorkerUnHold` quét mỗi 1s). (3) **Submit:** hệ thống tạo payload trong Outbox pattern; Outbox pattern chạy và lưu `InformationCustomer` (`Id`,`Name`,`Address`,`PhoneNumber`,`HoldId`) + publish message; RabbitMQ consumer nhận message và tạo Order. (4) Giữ các quyết định đã chốt: reserve ngay khi hold, trả lại khi hết hạn/hủy, confirm chốt hold; 1 user/1 hold; `/buy` chạy song song; kiểm tra hết hạn khi submit; có nút Hủy giữ chỗ, reload mất hold trên UI; `FlashSale.WorkerUnHold` quét 1s; 1 hold/user + RateLimit hiện có.
 - **Lý do (Rationale):** Thống nhất luồng theo yêu cầu nghiệp vụ của Đại ca, đảm bảo giữ slot/nhường chỗ và lưu thông tin khách hàng thông qua Outbox pattern trước khi tạo Order.
 - **Đánh đổi/hệ quả (Trade-off):** Thay đổi đáng kể luồng xử lý so với kiến trúc hiện tại (consumer ghi Order+Outbox từ message đầu vào); cần thiết kế lại transaction/điểm lưu `InformationCustomer`/payload Outbox/publish/consumer tạo Order để đảm bảo nhất quán và idempotency; chi tiết kỹ thuật cụ thể hóa ở Story 8.2.
+- **Trạng thái (Status):** Active
+
+### [2026-11-18] — Semantics metric InventoryRemaining trong luồng Hold (Phase 8)
+
+- **Bối cảnh (Context):** Luồng hold reserve tồn kho ngay khi giữ chỗ và trả lại khi hết hạn/hủy, ảnh hưởng cách hiểu chỉ số `InventoryRemaining` trên metrics/dashboard.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - `InventoryRemaining` = tồn kho vật lý/ban đầu trừ đơn đã chốt: không phản ánh slot đang bị giữ tạm thời.
+  - `InventoryRemaining` = tồn kho khả dụng để giữ/chốt (available sau reserve hold): phản ánh đúng khả năng nhận giữ chỗ mới.
+  - Thêm metric riêng cho hold/reserved/available: rõ hơn nhưng tăng phạm vi thay đổi observability.
+- **Quyết định (Decision):** `InventoryRemaining` phản ánh **tồn kho khả dụng để giữ/chốt** (available sau khi reserve hold; tăng lại khi hết hạn/hủy/nhả slot). Chưa thêm metric hold riêng trong phạm vi chốt hiện tại.
+- **Lý do (Rationale):** Phù hợp hành vi nghiệp vụ "giữ chỗ" và giúp DevOps/quan sát thấy số lượng còn có thể cấp slot.
+- **Đánh đổi/hệ quả (Trade-off):** Cần cập nhật mô tả/label dashboard hoặc tài liệu metrics ở 8.2/8.8 nếu tên gọi gây hiểu nhầm; nếu cần theo dõi chi tiết reserved/committed có thể bổ sung metric sau.
 - **Trạng thái (Status):** Active

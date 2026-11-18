@@ -1,8 +1,8 @@
 # Plan: Luồng Giữ chỗ (Hold) trước khi mua - FlashSale
 
-> **Trạng thái:** Draft để Đại ca review (chưa implement).  
-> **Ngày tạo:** 2026-11-18  
-> **Phạm vi:** Thay đổi luồng mua hàng hiện tại (FR-02/FR-03, UI mua hàng) theo yêu cầu mới.
+> **Trạng thái:** Đã chốt quyết định Story 8.1 (2026-11-18). Chi tiết contract/DB-message/transaction cụ thể hóa ở Story 8.2. Chưa implement.  
+> **Ngày tạo/cập nhật:** 2026-11-18  
+> **Phạm vi:** Thay đổi luồng mua hàng (FR-02/FR-03, UI mua hàng) theo flow chuẩn đã chốt.
 
 ## 1. Mục tiêu (flow chuẩn)
 
@@ -205,7 +205,7 @@ Redis TTL tự xóa key `hold:{holdId}` nhưng **không tự cộng trả invent
 - **User đóng tab/reload trang:** reload trang làm mất phiên giữ chỗ trên UI (không submit/hủy tiếp được). Theo flow chuẩn, quantity phải được trả lại/nhường chỗ; thực tế slot được nhả khi hết hạn/release và `FlashSale.WorkerUnHold` quét (SLA ~1–2s sau hết hạn) nếu không có release tường minh.
 - **Đồng hồ client lệch:** dùng `expiresAt` từ server và/hoặc `remainingSeconds`; quyết định hết hạn/confirm tại server.
 - **RateLimit/abuse:** đã chốt 1 user chỉ giữ 1 hold active cùng lúc và áp dụng RateLimit hiện có cho endpoint hold/confirm; hiện chưa thêm giới hạn bổ sung (có thể điều chỉnh sau khi quan sát).
-- **Thay đổi semantics inventory metric/monitoring:** `InventoryRemaining` và dashboard cần phản ánh đúng (available/reserved/committed hoặc ngữ nghĩa tương đương) nếu thay đổi.
+- **Thay đổi semantics inventory metric/monitoring:** `InventoryRemaining` được hiểu là **số lượng tồn kho khả dụng để giữ/chốt** (available sau khi reserve hold); khi hold hết hạn/hủy và trả slot thì giá trị tăng tương ứng. Dashboard/label/Prometheus mô tả cần được cập nhật ở 8.2/8.8 nếu cần làm rõ nghĩa (chưa thêm metric hold riêng trong phạm vi chốt hiện tại).
 
 ## 8. Câu hỏi cần Đại ca chốt
 
@@ -216,6 +216,7 @@ Redis TTL tự xóa key `hold:{holdId}` nhưng **không tự cộng trả invent
 5. ~~Cách xử lý hết hạn trên UI?~~ **Đã chốt (2026-11-18):** **kiểm tra khi submit là đủ** (server chặn confirm + nhả slot, UI countdown).
 6. ~~Hủy giữ chỗ / resume sau reload?~~ **Đã chốt (2026-11-18):** **có nút Hủy giữ chỗ**; **reload trang thì mất hold** (không resume).
 7. ~~SLA nhả slot sau hết hạn và anti-abuse giữ chỗ?~~ **Đã chốt (2026-11-18):** tạo worker riêng **`FlashSale.WorkerUnHold`**, quét **mỗi 1 giây** bằng `holds:expiring` + Lua `release_if_expired` (idempotent); anti-abuse: 1 hold/user + RateLimit hiện có cho hold/confirm, chưa thêm giới hạn bổ sung.
+8. ~~Semantics metrics/monitoring (`InventoryRemaining`, hold nếu có)?~~ **Đã chốt (2026-11-18):** `InventoryRemaining` phản ánh **tồn kho khả dụng để giữ/chốt** (available sau reserve). Chưa thêm metric hold riêng; cập nhật mô tả dashboard/metrics ở 8.2/8.8 nếu cần.
 
 ## 9. Đề xuất chia phase triển khai (sau khi chốt plan)
 
@@ -226,4 +227,4 @@ Redis TTL tự xóa key `hold:{holdId}` nhưng **không tự cộng trả invent
 - **Phase E - Tương thích & rollout:** xử lý `/buy` cũ, migration/config, cập nhật dashboard/metrics nếu cần, verify e2e/k6 kịch bản mới.
 
 ---
-*Ghi chú: Plan này mô tả hướng triển khai và các điểm cần chốt; chưa thay đổi behavior/code hiện tại.*
+*Ghi chú (Story 8.1): Các quyết định chính đã được chốt và ghi trong `docs/decisions.md`. Chi tiết thiết kế còn lại (validation định dạng/độ dài, kiểu dữ liệu/ràng buộc/khóa liên kết/migration cho `InformationCustomer`, cách lưu/publish qua Outbox và consumer tạo Order, transaction/consistency/idempotency, contract API/error code chi tiết, message/payload) được cụ thể hóa ở **Story 8.2**. Chưa thay đổi behavior/code hiện tại.*
