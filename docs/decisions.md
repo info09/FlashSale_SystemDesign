@@ -166,3 +166,40 @@ Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con �
 - **Đánh đổi/hệ quả (Trade-off):** Cần thiết lập workspace/build/frontend tooling (Node, Angular CLI) khi triển khai thực tế; UI vẫn ngoài phạm vi MVP backend hiện tại, các story Phase 7 (thiết kế/implement/test UI) sẽ bám theo quyết định này.
 - **Trạng thái (Status):** Active
 
+### [2026-11-18] — Thông tin bảng nhập thông tin khi confirm giữ chỗ (Phase 8)
+
+- **Bối cảnh (Context):** Luồng Hold/Reservation (Phase 8, `docs/plan-hold-reservation-flow.md`) yêu cầu người dùng nhập thông tin sau khi giữ chỗ thành công và submit để confirm mua. Cần chốt các field, validation cơ bản và nơi lưu trữ để thiết kế API/DB/UI.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - Chỉ forward thông tin trong message/payload, không lưu DB: đơn giản nhưng khó truy vấn/lịch sử đơn và không đáp ứng nhu cầu lưu thông tin khách hàng.
+  - Lưu thông tin ở DB (gắn với `Order` hoặc bảng liên quan): phục vụ lưu trữ và xử lý đơn; cần chốt schema/migration khi implement.
+  - Tập field tối thiểu khác (email, ghi chú, nhiều địa chỉ): chưa được yêu cầu tại thời điểm chốt.
+- **Quyết định (Decision):** Bảng nhập thông tin khi confirm gồm **Họ tên** (`Name`), **Phone** (`PhoneNumber`), **Địa chỉ** (`Address`); **bắt buộc nhập đầy đủ cả 3 trường**. Khi khách hàng submit confirm phải **lưu được thông tin vào DB** trong bảng mới **`InformationCustomer`** với các cột: **`Id`, `Name`, `Address`, `PhoneNumber`, `HoldId`**.
+- **Lý do (Rationale):** Đáp ứng yêu cầu nghiệp vụ thu thập và lưu trữ thông tin liên hệ/giao nhận khi xác nhận mua trong luồng giữ chỗ; cấu trúc bảng rõ ràng để triển khai lưu trữ gắn với hold/đơn hàng.
+- **Đánh đổi/hệ quả (Trade-off):** Cần bổ sung schema/migration/kiểu dữ liệu/ràng buộc (PK/FK/độ dài/unique nếu cần) cho bảng `InformationCustomer` và mapping liên kết với `Order`/hold khi triển khai; quy tắc validation chi tiết và việc đưa thông tin vào message/payload sẽ được cụ thể hóa ở bước thiết kế/implement.
+- **Trạng thái (Status):** Active
+
+### [2026-11-18] — Quy tắc luồng Hold/Reservation (Phase 8)
+
+- **Bối cảnh (Context):** Cần chốt hành vi nghiệp vụ/kỹ thuật của luồng giữ chỗ 1 phút (Phase 8) để triển khai API/Redis/UI/worker và đảm bảo nhường slot đúng khi hết hạn.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - Giữ chỗ không reserve tồn kho ngay: đơn giản về ngữ nghĩa "chưa trừ" nhưng khó đảm bảo slot không bị người khác lấy trong thời gian hold.
+  - Reserve ngay khi hold và trả lại khi hết hạn/hủy, confirm chỉ chốt hold: đảm bảo giữ slot đúng và nhường chỗ khi hết hạn; cần cơ chế release idempotent.
+  - Cho phép nhiều hold/user hoặc resume sau reload: linh hoạt hơn nhưng tăng độ phức tạp trạng thái và chống abuse.
+  - Thay thế hoàn toàn `POST /api/v1/flash-sale/buy`: đơn giản luồng nhưng breaking; chạy song song an toàn hơn khi chuyển đổi.
+  - Realtime/push khi hết hạn: UX tức thời hơn nhưng tăng độ phức tạp; kiểm tra khi submit + countdown phía client đủ cho nhu cầu hiện tại.
+  - Nhả slot trong worker hiện có hoặc worker riêng: worker riêng tách trách nhiệm và dễ vận hành/scale độc lập.
+- **Quyết định (Decision):** (1) **Reserve ngay khi hold** (giảm available trên Redis để giữ slot), **trả lại khi hết hạn/hủy**, **confirm chỉ chốt hold** (không trừ thêm tồn kho). (2) **1 user chỉ giữ 1 hold cùng lúc**. (3) Endpoint cũ **`POST /api/v1/flash-sale/buy` chạy song song** với hold/confirm. (4) Hết hạn xử lý bằng **kiểm tra khi submit** là đủ (server chặn confirm + nhả slot; UI countdown). (5) **Có nút Hủy giữ chỗ**; **reload trang thì mất hold** (không resume trên UI). (6) Tạo worker riêng **`FlashSale.WorkerUnHold`** quét nhả slot **mỗi 1 giây** bằng `holds:expiring` + Lua `release_if_expired` (idempotent). (7) Anti-abuse: 1 hold/user + RateLimit hiện có cho hold/confirm, chưa thêm giới hạn bổ sung.
+- **Lý do (Rationale):** Đảm bảo tính đúng của giữ chỗ và nhường slot trong flash sale (FR-02/FR-03, NFR-06), giới hạn chiếm dụng tài nguyên theo user, giảm rủi ro rollout bằng chạy song song endpoint cũ, giữ độ phức tạp UI/hạ tầng ở mức phù hợp, và tách trách nhiệm nhả slot sang worker riêng.
+- **Đánh đổi/hệ quả (Trade-off):** Cần thêm project/service `FlashSale.WorkerUnHold` và cơ chế Redis index/scan; reload/đóng tab không tự trả slot ngay nên phụ thuộc job quét (trễ mục tiêu ~1–2s sau hết hạn); validation chi tiết/mapping DB-message cho `InformationCustomer` vẫn cần cụ thể hóa ở bước thiết kế/implement.
+- **Trạng thái (Status):** Superseded (bởi [2026-11-18] — Quy tắc luồng Hold/Reservation theo flow chuẩn, Phase 8)
+
+### [2026-11-18] — Quy tắc luồng Hold/Reservation theo flow chuẩn (Phase 8)
+
+- **Bối cảnh (Context):** Cần chuẩn hóa luồng giữ chỗ 1 phút theo yêu cầu: kiểm tra Redis khi giữ chỗ, hiển thị form và giữ 1 phút, hết hạn/reload thì trả quantity, submit thì xử lý qua Outbox pattern để lưu `InformationCustomer`, publish message và tạo Order.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - Flow hiện tại (publish message tạo đơn ngay khi confirm, worker ghi Order+Outbox): phù hợp kiến trúc hiện có nhưng khác trình tự xử lý mà Đại ca yêu cầu.
+  - Flow chuẩn theo yêu cầu: submit tạo payload Outbox, Outbox pattern chạy để lưu `InformationCustomer` và publish message, RabbitMQ consumer tạo Order — thay đổi trình tự/trách nhiệm xử lý so với hiện tại, cần thiết kế chi tiết transaction/consistency.
+- **Quyết định (Decision):** (1) **Bấm giữ chỗ:** kiểm tra Redis đủ quantity; không đủ trả lỗi hết hàng, đủ thì reserve/giữ chỗ 1 phút và hiển thị bảng nhập thông tin. (2) **Không submit trong 1 phút hoặc reload trang:** trả lại quantity trong Redis và nhường chỗ (qua hết hạn/release, `FlashSale.WorkerUnHold` quét mỗi 1s). (3) **Submit:** hệ thống tạo payload trong Outbox pattern; Outbox pattern chạy và lưu `InformationCustomer` (`Id`,`Name`,`Address`,`PhoneNumber`,`HoldId`) + publish message; RabbitMQ consumer nhận message và tạo Order. (4) Giữ các quyết định đã chốt: reserve ngay khi hold, trả lại khi hết hạn/hủy, confirm chốt hold; 1 user/1 hold; `/buy` chạy song song; kiểm tra hết hạn khi submit; có nút Hủy giữ chỗ, reload mất hold trên UI; `FlashSale.WorkerUnHold` quét 1s; 1 hold/user + RateLimit hiện có.
+- **Lý do (Rationale):** Thống nhất luồng theo yêu cầu nghiệp vụ của Đại ca, đảm bảo giữ slot/nhường chỗ và lưu thông tin khách hàng thông qua Outbox pattern trước khi tạo Order.
+- **Đánh đổi/hệ quả (Trade-off):** Thay đổi đáng kể luồng xử lý so với kiến trúc hiện tại (consumer ghi Order+Outbox từ message đầu vào); cần thiết kế lại transaction/điểm lưu `InformationCustomer`/payload Outbox/publish/consumer tạo Order để đảm bảo nhất quán và idempotency; chi tiết kỹ thuật cụ thể hóa ở Story 8.2.
+- **Trạng thái (Status):** Active
