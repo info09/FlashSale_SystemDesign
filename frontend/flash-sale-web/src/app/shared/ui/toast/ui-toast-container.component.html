@@ -1,0 +1,11 @@
+<div class="ui-toast-container" aria-live="polite" aria-atomic="false">
+  @for (toast of toasts(); track toast.id) {
+    <div class="ui-toast" [class]="'ui-toast type-' + toast.type" role="status">
+      <span class="ui-toast-icon" aria-hidden="true">{{ icon(toast.type) }}</span>
+      <span class="ui-toast-message">{{ toast.message }}</span>
+      @if (toast.dismissible) {
+        <button type="button" class="ui-toast-close" (click)="dismiss(toast.id)" aria-label="Đóng">×</button>
+      }
+    </div>
+  }
+</div>

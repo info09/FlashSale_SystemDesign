@@ -1,0 +1,11 @@
+<div class="ui-empty-state">
+  <div class="ui-empty-icon" aria-hidden="true">{{ icon }}</div>
+  <p class="ui-empty-title">{{ title }}</p>
+  @if (description) {
+    <p class="ui-empty-desc">{{ description }}</p>
+  }
+  @if (actionLabel) {
+    <button type="button" class="ui-empty-action" (click)="action.emit()">{{ actionLabel }}</button>
+  }
+  <ng-content></ng-content>
+</div>

@@ -1,0 +1,50 @@
+<div class="ui-table-wrap">
+  @if (caption) {
+    <div class="ui-table-caption">{{ caption }}</div>
+  }
+
+  <div class="ui-table-scroll" [class.is-loading]="loading">
+    <table class="ui-table">
+      <thead>
+        <tr>
+          @for (col of columns; track col.key) {
+            <th scope="col">{{ col.header }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading) {
+          @for (i of [1,2,3]; track i) {
+            <tr class="skeleton-row">
+              @for (col of columns; track col.key) {
+                <td><span class="cell-skel"></span></td>
+              }
+            </tr>
+          }
+        } @else if (!rows.length) {
+          <tr>
+            <td [attr.colspan]="columns.length || 1" class="empty-cell">
+              <ui-empty-state [icon]="emptyIcon" [title]="emptyTitle" [description]="emptyDescription"></ui-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (row of rows; track trackRow($index, row)) {
+            <tr>
+              @for (col of columns; track col.key) {
+                <td>
+                  @if (col.kind === 'status') {
+                    <span class="status-badge" [class]="'status-badge tone-' + getStatusTone(row, col)">
+                      {{ getCell(row, col) }}
+                    </span>
+                  } @else {
+                    {{ getCell(row, col) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

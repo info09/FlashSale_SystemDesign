@@ -1,0 +1,44 @@
+.ui-empty-state {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 8px;
+  color: #475569;
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 20px 16px;
+}
+
+.ui-empty-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.ui-empty-title {
+  margin: 0;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ui-empty-desc {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.ui-empty-action {
+  margin-top: 4px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-empty-action:hover {
+  background: #cbd5e1;
+}

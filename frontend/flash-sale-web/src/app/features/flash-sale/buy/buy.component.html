@@ -15,24 +15,25 @@
   </div>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form-grid">
-    <label class="field">
-      <span>ProductId*</span>
-      <input type="text" formControlName="productId" placeholder="vd: product-test" [disabled]="loading()" />
-      @if (form.controls.productId.touched && form.controls.productId.invalid) {
-        <small class="field-error">Vui lòng nhập ProductId.</small>
-      }
-    </label>
+    <ui-form-field
+      label="ProductId"
+      [required]="true"
+      forId="buy-product-id"
+      [loading]="loading()"
+      [error]="form.controls.productId.touched && form.controls.productId.invalid ? 'Vui lòng nhập ProductId.' : null">
+      <input id="buy-product-id" type="text" formControlName="productId" placeholder="vd: product-test" [disabled]="loading()" />
+    </ui-form-field>
 
-    <label class="field">
-      <span>Quantity*</span>
-      <input type="number" min="1" formControlName="quantity" [disabled]="loading()" />
-      @if (form.controls.quantity.touched && form.controls.quantity.hasError('required')) {
-        <small class="field-error">Vui lòng nhập Quantity.</small>
-      }
-      @if (form.controls.quantity.touched && form.controls.quantity.hasError('min')) {
-        <small class="field-error">Quantity phải lớn hơn 0.</small>
-      }
-    </label>
+    <ui-form-field
+      label="Quantity"
+      [required]="true"
+      forId="buy-quantity"
+      [loading]="loading()"
+      [error]="form.controls.quantity.touched && form.controls.quantity.hasError('required')
+        ? 'Vui lòng nhập Quantity.'
+        : (form.controls.quantity.touched && form.controls.quantity.hasError('min') ? 'Quantity phải lớn hơn 0.' : null)">
+      <input id="buy-quantity" type="number" min="1" formControlName="quantity" [disabled]="loading()" />
+    </ui-form-field>
 
     @if (formError()) {
       <div class="alert error full-row" role="alert"><span class="alert-icon">!</span><span>{{ formError() }}</span></div>

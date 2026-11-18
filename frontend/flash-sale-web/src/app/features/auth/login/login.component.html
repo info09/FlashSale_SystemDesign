@@ -6,21 +6,23 @@
   </div>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <label class="field">
-      <span>Tên đăng nhập*</span>
-      <input type="text" formControlName="userName" autocomplete="username" [disabled]="loading()" placeholder="Nhập tên đăng nhập" />
-      @if (form.controls.userName.touched && form.controls.userName.invalid) {
-        <small class="field-error">Vui lòng nhập tên đăng nhập.</small>
-      }
-    </label>
+    <ui-form-field
+      label="Tên đăng nhập"
+      [required]="true"
+      forId="login-username"
+      [loading]="loading()"
+      [error]="form.controls.userName.touched && form.controls.userName.invalid ? 'Vui lòng nhập tên đăng nhập.' : null">
+      <input id="login-username" type="text" formControlName="userName" autocomplete="username" [disabled]="loading()" placeholder="Nhập tên đăng nhập" />
+    </ui-form-field>
 
-    <label class="field">
-      <span>Mật khẩu*</span>
-      <input type="password" formControlName="password" autocomplete="current-password" [disabled]="loading()" placeholder="Nhập mật khẩu" />
-      @if (form.controls.password.touched && form.controls.password.invalid) {
-        <small class="field-error">Vui lòng nhập mật khẩu.</small>
-      }
-    </label>
+    <ui-form-field
+      label="Mật khẩu"
+      [required]="true"
+      forId="login-password"
+      [loading]="loading()"
+      [error]="form.controls.password.touched && form.controls.password.invalid ? 'Vui lòng nhập mật khẩu.' : null">
+      <input id="login-password" type="password" formControlName="password" autocomplete="current-password" [disabled]="loading()" placeholder="Nhập mật khẩu" />
+    </ui-form-field>
 
     @if (errorMessage()) {
       <div class="alert error" role="alert"><span class="alert-icon">!</span><span>{{ errorMessage() }}</span></div>

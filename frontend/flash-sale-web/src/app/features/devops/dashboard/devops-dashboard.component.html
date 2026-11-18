@@ -25,12 +25,21 @@
   }
 
   @if (loading() && !health() && !metrics().length) {
-    <div class="skeleton-grid" aria-live="polite">
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-    </div>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Đang tải dữ liệu</h2>
+        <span class="panel-hint">HealthCheck & Metric</span>
+      </div>
+      <div class="skeleton-grid" aria-live="polite">
+        <ui-loading-skeleton variant="card" height="120px"></ui-loading-skeleton>
+        <ui-loading-skeleton variant="card" height="120px"></ui-loading-skeleton>
+        <ui-loading-skeleton variant="card" height="120px"></ui-loading-skeleton>
+        <ui-loading-skeleton variant="card" height="120px"></ui-loading-skeleton>
+      </div>
+      <div class="table-skeleton-wrap">
+        <ui-loading-skeleton variant="table" [rows]="5"></ui-loading-skeleton>
+      </div>
+    </section>
   } @else {
     <section class="panel">
       <div class="panel-header">
@@ -86,8 +95,20 @@
       </div>
 
       @if (!metrics().length) {
-        <div class="empty-state">Không có dữ liệu metric. Kiểm tra Prometheus/endpoint metrics.</div>
+        <ui-empty-state
+          icon="📊"
+          title="Không có dữ liệu."
+          description="Không có dữ liệu metric. Kiểm tra Prometheus/endpoint metrics.">
+        </ui-empty-state>
       } @else {
+        <ui-table
+          [columns]="metricColumns"
+          [rows]="metricRows()"
+          trackByKey="id"
+          emptyTitle="Không có dữ liệu."
+          emptyDescription="Không có metric để hiển thị.">
+        </ui-table>
+
         <div class="metrics-grid">
           @for (metric of metrics(); track trackByKey($index, metric)) {
             <article class="metric-card">
@@ -177,19 +198,23 @@
             </div>
           }
 
-          @if (purgeConfirming()) {
-            <div class="confirm-box" role="dialog" aria-label="Xác nhận purge Outbox">
-              <p><strong>Xác nhận purge:</strong> Hành động này sẽ xóa bản ghi Outbox đã xử lý và quá hạn. Không thể hoàn tác.</p>
-              <div class="inline-actions">
-                <button class="btn danger" type="button" (click)="confirmPurge()" [disabled]="purgeLoading()">Xác nhận Purge</button>
-                <button class="btn secondary" type="button" (click)="cancelPurge()" [disabled]="purgeLoading()">Hủy</button>
-              </div>
-            </div>
-          } @else {
-            <button class="btn secondary" type="button" (click)="requestPurge()" [disabled]="purgeLoading()">
-              {{ purgeLoading() ? 'Đang purge...' : 'Purge Outbox' }}
-            </button>
-          }
+          <button class="btn secondary" type="button" (click)="requestPurge()" [disabled]="purgeLoading()">
+            {{ purgeLoading() ? 'Đang purge...' : 'Purge Outbox' }}
+          </button>
+
+          <ui-modal
+            [open]="purgeConfirming()"
+            title="Xác nhận purge Outbox"
+            primaryLabel="Xác nhận Purge"
+            secondaryLabel="Hủy"
+            [danger]="true"
+            [busy]="purgeLoading()"
+            (closed)="cancelPurge()"
+            (cancelled)="cancelPurge()"
+            (confirmed)="confirmPurge()">
+            <p>Hành động này sẽ xóa bản ghi Outbox đã xử lý (Published/Failed) và quá hạn giữ. Bản ghi Pending không bị xóa.</p>
+            <p><strong>Hành động này không thể hoàn tác.</strong></p>
+          </ui-modal>
         </div>
       </section>
     </div>

@@ -6,14 +6,17 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { finalize, forkJoin, of, catchError, map } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DevOpsService } from '../devops.service';
-import { HealthResponse, MetricSnapshot, OutboxPurgeResponse } from '../devops.models';
-
-type LoadState = 'loading' | 'success' | 'error';
+import { HealthResponse, MetricSnapshot } from '../devops.models';
+import { UiModalComponent } from '../../../shared/ui/modal/ui-modal.component';
+import { UiEmptyStateComponent } from '../../../shared/ui/empty-state/ui-empty-state.component';
+import { UiLoadingSkeletonComponent } from '../../../shared/ui/loading-skeleton/ui-loading-skeleton.component';
+import { UiTableComponent, UiTableColumn } from '../../../shared/ui/table/ui-table.component';
+import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 @Component({
   selector: 'app-devops-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, UiModalComponent, UiEmptyStateComponent, UiLoadingSkeletonComponent, UiTableComponent],
   templateUrl: './devops-dashboard.component.html',
   styleUrl: './devops-dashboard.component.scss'
 })
@@ -22,6 +25,7 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly toastService = inject(ToastService);
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -36,6 +40,23 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
   readonly grafanaUrl = 'http://localhost:3000/d/flashsale-overview/flashsale-overview?orgId=1&refresh=10s&from=now-15m&to=now';
   readonly grafanaEmbedUrl: SafeResourceUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.grafanaUrl);
 
+  readonly metricColumns: UiTableColumn[] = [
+    { key: 'label', header: 'Metric' },
+    { key: 'value', header: 'Giá trị hiện tại' },
+    { key: 'detail', header: 'Chi tiết theo job/sample' },
+    {
+      key: 'state',
+      header: 'Trạng thái',
+      kind: 'status',
+      statusTone: (value) => {
+        const s = String(value ?? '').toLowerCase();
+        if (s === 'có dữ liệu') return 'success';
+        if (s === 'không có dữ liệu') return 'warning';
+        return 'neutral';
+      }
+    }
+  ];
+
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly healthEntries = computed(() => {
@@ -44,6 +65,16 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
       const status = typeof value === 'string' ? value : (value?.status || 'Unknown');
       return { name, status, isHealthy: this.isHealthyStatus(status) };
     });
+  });
+
+  readonly metricRows = computed(() => {
+    return this.metrics().map((m) => ({
+      id: m.key,
+      label: m.label,
+      value: this.formatMetricSummary(m),
+      detail: m.samples.length > 1 ? m.samples.map((s) => `${s.labels['job'] || s.labels['instance'] || 'sample'}=${this.formatValue(s.value, m.unit)}`).join(' | ') : (m.samples.length === 1 ? (m.samples[0].labels['job'] || 'sample') : '—'),
+      state: m.samples.length ? 'Có dữ liệu' : 'Không có dữ liệu'
+    }));
   });
 
   readonly overallHealthy = computed(() => {
@@ -133,10 +164,9 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           const count = res?.deletedCount ?? 0;
-          this.purgeResult.set({
-            type: 'success',
-            message: res?.message || `Đã xóa ${count} ghi Outbox đã xử lý và quá hạn.`
-          });
+          const message = res?.message || `Đã xóa ${count} ghi Outbox đã xử lý và quá hạn.`;
+          this.purgeResult.set({ type: 'success', message });
+          this.toastService.success(message);
           this.refresh(true);
         },
         error: (err: HttpErrorResponse) => {
@@ -146,8 +176,15 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
           }
           const msg = err?.error?.message || 'Lỗi hệ thống khi purge bảng Outbox.';
           this.purgeResult.set({ type: 'error', message: msg });
+          this.toastService.error(msg);
         }
       });
+  }
+
+  formatMetricSummary(metric: MetricSnapshot | undefined): string {
+    if (!metric || metric.latestValue === null || metric.latestValue === undefined || !metric.samples.length) return '—';
+    if (metric.samples.length === 1) return this.formatValue(metric.samples[0].value, metric.unit);
+    return metric.samples.map((s) => `${s.labels['job'] || 'sample'}: ${this.formatValue(s.value, metric.unit)}`).join(' • ');
   }
 
   formatMetric(metric: MetricSnapshot | undefined): string {

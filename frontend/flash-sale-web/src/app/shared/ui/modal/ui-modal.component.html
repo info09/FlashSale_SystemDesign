@@ -1,0 +1,30 @@
+@if (open) {
+  <div class="ui-modal-backdrop" (click)="onBackdrop($event)">
+    <div class="ui-modal" role="dialog" aria-modal="true" [attr.aria-label]="title || 'Hộp thoại'">
+      <div class="ui-modal-header">
+        <h3 class="ui-modal-title">{{ title }}</h3>
+        <button type="button" class="ui-modal-close" (click)="close()" [disabled]="disableClose || busy" [attr.aria-label]="closeLabel">×</button>
+      </div>
+
+      <div class="ui-modal-body">
+        <ng-content></ng-content>
+      </div>
+
+      <div class="ui-modal-actions">
+        <ng-content select="[modal-actions]"></ng-content>
+        @if (!primaryLabel && !secondaryLabel) {
+          <!-- allow fully custom actions via projection -->
+        } @else {
+          @if (secondaryLabel) {
+            <button type="button" class="btn secondary" (click)="cancel()" [disabled]="busy">{{ secondaryLabel }}</button>
+          }
+          @if (primaryLabel) {
+            <button type="button" class="btn" [class.primary]="!danger" [class.danger]="danger" (click)="confirm()" [disabled]="busy">
+              {{ busy ? 'Đang xử lý...' : primaryLabel }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,21 @@
+<div class="ui-skeleton" [class]="'ui-skeleton variant-' + variant" aria-busy="true" aria-live="polite">
+  @switch (variant) {
+    @case ('circle') {
+      <div class="skel circle" [style.width]="width" [style.height]="height"></div>
+    }
+    @case ('card') {
+      <div class="skel card" [style.height]="height !== '16px' ? height : '120px'"></div>
+    }
+    @case ('table') {
+      <div class="skel table-head"></div>
+      @for (r of rowItems; track r) {
+        <div class="skel table-row"></div>
+      }
+    }
+    @default {
+      @for (i of lineItems; track i) {
+        <div class="skel line" [style.height]="height" [style.width]="i === lineItems.length - 1 && lineItems.length > 1 ? '70%' : width"></div>
+      }
+    }
+  }
+</div>

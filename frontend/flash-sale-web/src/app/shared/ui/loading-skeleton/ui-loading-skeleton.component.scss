@@ -1,0 +1,23 @@
+.ui-skeleton {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.skel {
+  background: linear-gradient(90deg, rgba(226,232,240,0.7), rgba(241,245,249,0.95), rgba(226,232,240,0.7));
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.4s infinite;
+  border-radius: 10px;
+}
+
+.skel.line { border-radius: 8px; }
+.skel.circle { border-radius: 999px; }
+.skel.card { width: 100%; border-radius: 16px; }
+.skel.table-head { height: 40px; border-radius: 10px; }
+.skel.table-row { height: 34px; border-radius: 8px; }
+
+@keyframes ui-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

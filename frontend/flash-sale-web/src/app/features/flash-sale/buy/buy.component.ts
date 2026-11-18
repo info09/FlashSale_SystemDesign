@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/auth/auth.service';
 import { FlashSaleService } from './flash-sale.service';
 import { ApiErrorResponse, BuyResponse } from './buy.models';
+import { UiFormFieldComponent } from '../../../shared/ui/form-field/ui-form-field.component';
 
 type ResultType = 'success' | 'error' | 'warning' | 'info';
 
@@ -19,7 +20,7 @@ interface BuyResult {
 @Component({
   selector: 'app-buy',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, UiFormFieldComponent],
   templateUrl: './buy.component.html',
   styleUrl: './buy.component.scss'
 })

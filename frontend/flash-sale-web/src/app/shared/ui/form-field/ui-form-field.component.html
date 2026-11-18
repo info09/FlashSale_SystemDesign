@@ -1,0 +1,21 @@
+<div class="ui-form-field" [class.has-error]="!!error" [class.is-loading]="loading">
+  @if (label) {
+    <label class="ui-label" [attr.for]="forId">
+      {{ label }}
+      @if (required) { <span class="req" aria-hidden="true">*</span> }
+    </label>
+  }
+
+  <div class="ui-control">
+    <ng-content></ng-content>
+    @if (loading) {
+      <span class="ui-inline-spinner" aria-hidden="true"></span>
+    }
+  </div>
+
+  @if (error) {
+    <small class="ui-error" role="alert">{{ error }}</small>
+  } @else if (hint) {
+    <small class="ui-hint">{{ hint }}</small>
+  }
+</div>
