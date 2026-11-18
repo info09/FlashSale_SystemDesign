@@ -47,6 +47,7 @@ docker compose --profile k6 run --rm \
 - `THRESHOLD_P99_MS`: nếu đặt (vd `20`), bật threshold `http_req_duration p(99)<THRESHOLD_P99_MS` (Story 6.2, NFR-01)
 - `THRESHOLD_HTTP_REQ_FAILED_RATE`: ngưỡng `http_req_failed` rate (mặc định `1`; k6 tính 4xx/5xx là failed)
 - `THRESHOLD_CHECKS_RATE`: nếu đặt (vd `1`), yêu cầu mọi response thuộc {202,400,401,429} — không có 5xx do quá tải (Story 6.3, NFR-02)
+- `THRESHOLD_ERROR_RATE`: nếu đặt (vd `0.01`), yêu cầu `error_rate < THRESHOLD_ERROR_RATE` (5xx/timeout/response bất thường; không tính 202/400/401/429) — Story 6.4, NFR-03
 
 ## Ví dụ Story 6.2 (p99 < 20ms)
 ```bash
@@ -66,6 +67,15 @@ docker compose --profile k6 run --rm \
   flashsale-k6 run /scripts/flashsale-buy.js
 ```
 
+## Ví dụ Story 6.4 (Error Rate < 1% với 8.000 VU)
+```bash
+docker compose --profile k6 run --rm \
+  -e BASE_URL=http://flashsale-api:8080 -e ACCESS_TOKEN=<JWT> -e PRODUCT_ID=<id> \
+  -e VUS=8000 -e DURATION=30s -e SLEEP_SECONDS=0.1 \
+  -e THRESHOLD_ERROR_RATE=0.01 -e THRESHOLD_CHECKS_RATE=0.99 \
+  flashsale-k6 run /scripts/flashsale-buy.js
+```
+
 ## Lưu ý
 - Story 6.1: 8.000 VU đồng thời. Story 6.2–6.4 dùng cùng script với threshold/env phù hợp để kiểm tra NFR-01/NFR-02/NFR-03.
-- 15.000 RPS và 8.000 VU đòi hỏi hạ tầng/máy chạy k6 đủ mạnh; kết quả phụ thuộc RateLimit, Inventory, token và cấu hình môi trường.
+- `error_rate` (custom) không tính 202/400/401/429 là lỗi; `http_req_failed` của k6 vẫn tính 4xx/5xx. 15.000 RPS và 8.000 VU đòi hỏi hạ tầng/máy chạy k6 đủ mạnh.

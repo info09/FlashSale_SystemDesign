@@ -1,5 +1,9 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { Rate } from 'k6/metrics';
+
+// Story 6.4 (NFR-03): Error Rate < 1% (loi he thong/5xx hoac response khong mong doi), khong tinh 429/400/401/202 hop le.
+const errorRate = new Rate('error_rate');
 
 // Story 6.1 (FR-07, NFR-03): script k6 giả lập 8.000 VirtualUser đồng thời.
 // Cấu hình qua biến môi trường:
@@ -20,6 +24,7 @@ import { check, sleep } from 'k6';
 // - THRESHOLD_P99_MS: nếu đặt (vd 20), bật threshold p(99) http_req_duration (Story 6.2)
 // - THRESHOLD_HTTP_REQ_FAILED_RATE: ngưỡng http_req_failed rate (mặc định: 1)
 // - THRESHOLD_CHECKS_RATE: ngưỡng checks rate (vd 1 để yêu cầu không có 5xx ngoài 429, Story 6.3)
+// - THRESHOLD_ERROR_RATE: ngưỡng error_rate (vd 0.01 cho <1%, Story 6.4)
 
 const BASE_URL = __ENV.BASE_URL || 'http://flashsale-api:8080';
 const PRODUCT_ID = __ENV.PRODUCT_ID || 'flashsale-product-1';
@@ -37,6 +42,7 @@ const THRESHOLD_HTTP_REQ_FAILED_RATE = __ENV.THRESHOLD_HTTP_REQ_FAILED_RATE
   ? Number(__ENV.THRESHOLD_HTTP_REQ_FAILED_RATE)
   : 1;
 const THRESHOLD_CHECKS_RATE = __ENV.THRESHOLD_CHECKS_RATE ? Number(__ENV.THRESHOLD_CHECKS_RATE) : null;
+const THRESHOLD_ERROR_RATE = __ENV.THRESHOLD_ERROR_RATE ? Number(__ENV.THRESHOLD_ERROR_RATE) : null;
 
 const thresholds = {
   http_req_failed: [`rate<${THRESHOLD_HTTP_REQ_FAILED_RATE}`],
@@ -50,6 +56,11 @@ if (THRESHOLD_P99_MS !== null && !Number.isNaN(THRESHOLD_P99_MS)) {
 // Story 6.3 (NFR-02): không chấp nhận 5xx do quá tải (ngoại 429) -> mọi response phải thuộc tập cho phép.
 if (THRESHOLD_CHECKS_RATE !== null && !Number.isNaN(THRESHOLD_CHECKS_RATE)) {
   thresholds.checks = [`rate>=${THRESHOLD_CHECKS_RATE}`];
+}
+
+// Story 6.4 (NFR-03): Error Rate < 1% (5xx/timeout/response bất thường).
+if (THRESHOLD_ERROR_RATE !== null && !Number.isNaN(THRESHOLD_ERROR_RATE)) {
+  thresholds.error_rate = [`rate<${THRESHOLD_ERROR_RATE}`];
 }
 
 let scenario;
@@ -145,10 +156,12 @@ export default function (data) {
   const res = http.post(`${BASE_URL}/api/v1/flash-sale/buy`, payload, { headers });
 
   // 202: nhận đơn thành công; 400: hết kho/không hợp lệ; 401: chưa xác thực; 429: rate limit.
-  // 5xx (ngoại 429) là dấu hiệu quá tải/lỗi hệ thống cần theo dõi ở các story benchmark sau.
+  // 5xx (ngoại 429) hoặc lỗi mạng/timeout được tính vào error_rate (Story 6.4).
+  const okStatus = [202, 400, 401, 429].includes(res.status);
   check(res, {
-    'status is expected (202/400/401/429)': (r) => [202, 400, 401, 429].includes(r.status),
+    'status is expected (202/400/401/429)': () => okStatus,
   });
+  errorRate.add(okStatus ? 0 : 1);
 
   if (SLEEP_SECONDS > 0) {
     sleep(SLEEP_SECONDS);
