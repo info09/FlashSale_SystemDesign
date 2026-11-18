@@ -120,7 +120,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ### Phase 7: UI / Frontend (theo docs/ux.md — ngoài phạm vi MVP)
 
-- [] Story 7.1 (UX): Thiết kế màn hình Gọi API mua hàng (FlashSaleShopper) theo docs/ux.md phần Information Architecture
+- [x] Story 7.1 (UX): Thiết kế màn hình Gọi API mua hàng (FlashSaleShopper) theo docs/ux.md phần Information Architecture — them `docs/ux-flashsale-buy-screen.md` (flow FR-01/FR-02/FR-03, wireframe desktop/mobile, trang thai/loading/error/success 202, copy theo glossary, mapping `POST /api/v1/flash-sale/buy`, component/tokens/accessibility); trien khai UI Angular tai `frontend/flash-sale-web` (login lay Bearer token, guard/interceptor, man hinh `/buy` goi `/api/v1/flash-sale/buy`, xu ly trang thai 202/400/401/429/5xx, proxy `/api`).
 - [] Story 7.2 (UX): Thiết kế màn hình Grafana Dashboard cho DevOps theo docs/ux.md
 - [] Story 7.3 (UX): Triển khai component Form, Table, Modal, Toast, Empty state, Loading skeleton theo docs/ux.md phần 5
 - [] Story 7.4 (UX): Áp dụng design tokens (màu, typography, spacing, breakpoint) theo docs/ux.md phần 4 ([ĐỀ XUẤT - CẦN DUYỆT])
@@ -131,9 +131,9 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ## 3. Trạng thái hiện tại
 
-- **Phase đang làm:** Phase 6 - Load Testing & Benchmarking (FR-07, NFR-01, NFR-02, NFR-03)
-- **Story đang làm:** Hoan thanh tat ca story Phase 6 (6.1–6.6); chua bat dau Phase 7
-- **Lần cập nhật gần nhất:** Danh dau done Story 6.3, 6.4 theo ket qua k6 thuc te (8000 VU, 540857 req, ~17765 req/s): `checks 100%` (202/400/401/429), `error_rate 0.00%` (<1%), khong co 5xx/response bat thuong, throughput > 15000 RPS. Cap nhat checklist Phase 6 va trang thai hien tai.
+- **Phase đang làm:** Phase 7 - UI / Frontend (theo docs/ux.md, ngoài phạm vi MVP)
+- **Story đang làm:** Hoan thanh Story 7.1 (thiet ke + trien khai Angular man hinh FlashSaleShopper); chua thuc hien 7.2–7.8
+- **Lần cập nhật gần nhất:** Trien khai Story 7.1 bang Angular (khong commit): tao `frontend/flash-sale-web` (Angular CLI, standalone, routing, proxy `/api`), core auth (login service/interceptor/guard), trang `/login` va `/buy` theo spec/copy/trang thai 202/400/401/429/5xx; cap nhat `docs/status.md`. Chua chay build verification trong phien nay.
 - **Sửa lỗi JWT:** RateLimitMiddleware IsAuthenticated=false do ValidIssuer/ValidAudience=null (builder.Configuration không có AddInMemoryCollection từ WebApplicationFactory) → thêm fallback ?? "FlashSale.Api" / ?? "FlashSale.Client"; build 0 error
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain

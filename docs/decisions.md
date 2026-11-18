@@ -154,3 +154,15 @@ Chờ điền dần trong quá trình implement. Mỗi entry là 1 heading con �
 - **Danh doi/he quy (Trade-off):** Can them BackgroundService moi (OrderNotificationWorkerService) chay song song voi Worker chinh, tang tai nguyen it it. Neu can giam latency, co the giam interval poll hoac dung EventingConsumer (BasicConsume) thay vi BasicGet.
 - **Trang thai (Status):** Active
 
+### [2026-11-18] — Chọn Angular cho UI/Frontend
+
+- **Bối cảnh (Context):** Phase 7 (UI/Frontend, ngoài phạm vi MVP backend) cần công nghệ frontend để thiết kế/triển khai màn hình theo `docs/ux.md` (ví dụ màn hình Gọi API mua hàng cho FlashSaleShopper). Cần chốt framework để thống nhất triển khai và convention khi bắt đầu code UI.
+- **Các lựa chọn đã xem xét (Options considered):**
+  - React/Next.js: phổ biến, hệ sinh thái lớn; team cần thống nhất style/state management.
+  - Vue/Nuxt: nhẹ, dễ tiếp cận; khác stack quen thuộc của team.
+  - Angular: framework đầy đủ (routing, forms, DI, HttpClient), phù hợp ứng dụng enterprise và phong cách .NET/C#; đã được nhắc trong hồ sơ tech stack (`about-me.md`).
+- **Quyết định (Decision):** Chọn **Angular** làm framework cho UI/Frontend của dự án.
+- **Lý do (Rationale):** Thống nhất hướng triển khai UI Phase 7, tận dụng stack quen thuộc (Angular), hỗ trợ tổ chức component/service/form rõ ràng khi hiện thực các màn hình và luồng trong `docs/ux.md` (FlashSaleShopper, DevOps dashboard tích hợp nếu có).
+- **Đánh đổi/hệ quả (Trade-off):** Cần thiết lập workspace/build/frontend tooling (Node, Angular CLI) khi triển khai thực tế; UI vẫn ngoài phạm vi MVP backend hiện tại, các story Phase 7 (thiết kế/implement/test UI) sẽ bám theo quyết định này.
+- **Trạng thái (Status):** Active
+

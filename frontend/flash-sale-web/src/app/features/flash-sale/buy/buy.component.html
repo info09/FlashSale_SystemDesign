@@ -1,0 +1,78 @@
+<section class="card buy-card">
+  <div class="card-header">
+    <div class="title-block">
+      <span class="eyebrow">FlashSale Checkout</span>
+      <h1>Gọi API mua hàng</h1>
+      <p class="subtitle">Gửi yêu cầu mua Product trong FlashSale qua ApiGateway và nhận phản hồi tức thì.</p>
+    </div>
+    <button type="button" class="btn ghost" (click)="logout()">Đăng xuất</button>
+  </div>
+
+  <div class="stats-row" aria-hidden="true">
+    <div class="stat-chip"><span class="dot"></span>Fast-path</div>
+    <div class="stat-chip">RateLimit + Inventory</div>
+    <div class="stat-chip accent">202 Accepted</div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form-grid">
+    <label class="field">
+      <span>ProductId*</span>
+      <input type="text" formControlName="productId" placeholder="vd: product-test" [disabled]="loading()" />
+      @if (form.controls.productId.touched && form.controls.productId.invalid) {
+        <small class="field-error">Vui lòng nhập ProductId.</small>
+      }
+    </label>
+
+    <label class="field">
+      <span>Quantity*</span>
+      <input type="number" min="1" formControlName="quantity" [disabled]="loading()" />
+      @if (form.controls.quantity.touched && form.controls.quantity.hasError('required')) {
+        <small class="field-error">Vui lòng nhập Quantity.</small>
+      }
+      @if (form.controls.quantity.touched && form.controls.quantity.hasError('min')) {
+        <small class="field-error">Quantity phải lớn hơn 0.</small>
+      }
+    </label>
+
+    @if (formError()) {
+      <div class="alert error full-row" role="alert"><span class="alert-icon">!</span><span>{{ formError() }}</span></div>
+    }
+
+    <div class="actions full-row">
+      <button class="btn primary" type="submit" [disabled]="loading()">
+        <span class="btn-glow"></span>
+        {{ loading() ? 'Đang gửi yêu cầu...' : 'Mua ngay' }}
+      </button>
+      <button class="btn secondary" type="button" (click)="reset()" [disabled]="loading()">Đặt lại</button>
+    </div>
+  </form>
+
+  <section class="result-section" aria-live="polite">
+    <div class="result-header">
+      <h2>Kết quả</h2>
+      <span class="result-hint">Trạng thái phản hồi từ API</span>
+    </div>
+
+    @if (loading()) {
+      <div class="alert info loading-alert">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Đang gửi yêu cầu...</span>
+      </div>
+    } @else if (result(); as res) {
+      <div class="alert" [class.success]="res.type === 'success'" [class.error]="res.type === 'error'" [class.warning]="res.type === 'warning'" [class.info]="res.type === 'info'" role="alert">
+        <span class="alert-icon">{{ res.type === 'success' ? '✓' : res.type === 'warning' ? '!' : res.type === 'error' ? '×' : 'i' }}</span>
+        <div>
+          <p class="result-message">{{ res.message }}</p>
+          @if (res.orderId) {
+            <p class="result-meta"><strong>OrderId:</strong> <code>{{ res.orderId }}</code></p>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <p>Chưa có yêu cầu mua hàng. Nhập thông tin và nhấn <strong>"Mua ngay"</strong>.</p>
+      </div>
+    }
+  </section>
+</section>

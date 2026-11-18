@@ -1,0 +1,33 @@
+<section class="card login-card">
+  <div class="card-hero">
+    <span class="eyebrow">FlashSale Access</span>
+    <h1>Đăng nhập</h1>
+    <p class="subtitle">Đăng nhập để nhận BearerToken và gọi API mua hàng FlashSale.</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <label class="field">
+      <span>Tên đăng nhập*</span>
+      <input type="text" formControlName="userName" autocomplete="username" [disabled]="loading()" placeholder="Nhập tên đăng nhập" />
+      @if (form.controls.userName.touched && form.controls.userName.invalid) {
+        <small class="field-error">Vui lòng nhập tên đăng nhập.</small>
+      }
+    </label>
+
+    <label class="field">
+      <span>Mật khẩu*</span>
+      <input type="password" formControlName="password" autocomplete="current-password" [disabled]="loading()" placeholder="Nhập mật khẩu" />
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <small class="field-error">Vui lòng nhập mật khẩu.</small>
+      }
+    </label>
+
+    @if (errorMessage()) {
+      <div class="alert error" role="alert"><span class="alert-icon">!</span><span>{{ errorMessage() }}</span></div>
+    }
+
+    <button class="btn primary" type="submit" [disabled]="loading()">
+      {{ loading() ? 'Đang đăng nhập...' : 'Đăng nhập' }}
+    </button>
+  </form>
+</section>
