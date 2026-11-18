@@ -111,7 +111,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ### Phase 6: Load Testing & Benchmarking — FR-07, NFR-01, NFR-02, NFR-03
 
-- [] Story 6.1 (Test): Viết script k6 Load Test giả lập 8.000 VirtualUser đồng thời
+- [x] Story 6.1 (Test): Viết script k6 Load Test giả lập 8.000 VirtualUser đồng thời — them `tests/Integration.Tests/k6/flashsale-buy.js` (scenario `constant-vus`, mac dinh `VUS=8000`, target `POST /api/v1/flash-sale/buy`, ho tro `BASE_URL`/`ACCESS_TOKEN`/`PRODUCT_ID`/`DURATION` va setup login tu `K6_USERNAME`/`K6_PASSWORD`) va `tests/Integration.Tests/k6/README.md` (huong dan chay qua `docker compose --profile k6`); verify syntax `node --check` pass.
 - [] Story 6.2 (Test): Chạy k6 kiểm tra p99 latency luồng nhận đơn < 20ms (NFR-01)
 - [] Story 6.3 (Test): Chạy k6 kiểm tra spike 15.000 RPS, không trả về 5xx do quá tải (ngoại 429 rate limiter) (NFR-02)
 - [] Story 6.4 (Test): Chạy k6 kiểm tra Error Rate < 1% khi 8.000 VirtualUser (NFR-03)
@@ -131,9 +131,9 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 
 ## 3. Trạng thái hiện tại
 
-- **Phase đang làm:** Phase 5 - Observability & Monitoring (FR-06, NFR-07)
-- **Story đang làm:** Hoan thanh Story 5.7 (e2e Grafana Dashboard); Phase 5 da hoan thanh cac story 5.1-5.7, chua bat dau Phase 6
-- **Lần cập nhật gần nhất:** Hoan thanh Story 5.7 (Test, khong commit): them `tests/Integration.Tests/EndToEnd/GrafanaDashboardEndToEndTest.cs` (Testcontainers Grafana + provisioning/dashboards mount, verify datasource va dashboard `FlashSale Overview` hien thi du 5 metric qua Grafana API); `dotnet test tests/Integration.Tests -c Release --filter "FullyQualifiedName~GrafanaDashboardEndToEndTest"` pass 1/1. Dong thoi tick Story 5.4 (Infra) sau khi co e2e dashboard hop le; 5.5, 5.6 da pass truoc do.
+- **Phase đang làm:** Phase 6 - Load Testing & Benchmarking (FR-07, NFR-01, NFR-02, NFR-03)
+- **Story đang làm:** Hoan thanh Story 6.1 (viet script k6); chua chay benchmark 6.2-6.4
+- **Lần cập nhật gần nhất:** Hoan thanh Story 6.1 (Test, khong commit): them `tests/Integration.Tests/k6/flashsale-buy.js` (gia lap 8.000 VU dong thoi, `constant-vus`, goi `POST /api/v1/flash-sale/buy`, cau hinh qua env vars) va `tests/Integration.Tests/k6/README.md`; `node --check tests/Integration.Tests/k6/flashsale-buy.js` pass. Tick Story 6.1 trong checklist.
 - **Sửa lỗi JWT:** RateLimitMiddleware IsAuthenticated=false do ValidIssuer/ValidAudience=null (builder.Configuration không có AddInMemoryCollection từ WebApplicationFactory) → thêm fallback ?? "FlashSale.Api" / ?? "FlashSale.Client"; build 0 error
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain
