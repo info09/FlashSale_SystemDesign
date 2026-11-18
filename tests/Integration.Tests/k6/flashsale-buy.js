@@ -19,6 +19,19 @@ const QUANTITY = Number(__ENV.QUANTITY || 1);
 const VUS = Number(__ENV.VUS || 8000);
 const DURATION = __ENV.DURATION || '30s';
 const SLEEP_SECONDS = Number(__ENV.SLEEP_SECONDS || 0.1);
+const THRESHOLD_P99_MS = __ENV.THRESHOLD_P99_MS ? Number(__ENV.THRESHOLD_P99_MS) : null;
+const THRESHOLD_HTTP_REQ_FAILED_RATE = __ENV.THRESHOLD_HTTP_REQ_FAILED_RATE
+  ? Number(__ENV.THRESHOLD_HTTP_REQ_FAILED_RATE)
+  : 1;
+
+const thresholds = {
+  http_req_failed: [`rate<${THRESHOLD_HTTP_REQ_FAILED_RATE}`],
+};
+
+// Story 6.2 (NFR-01): p99 latency luồng nhận đơn < 20ms (fast-path).
+if (THRESHOLD_P99_MS !== null && !Number.isNaN(THRESHOLD_P99_MS)) {
+  thresholds.http_req_duration = [`p(99)<${THRESHOLD_P99_MS}`];
+}
 
 export const options = {
   scenarios: {
@@ -28,11 +41,7 @@ export const options = {
       duration: DURATION,
     },
   },
-  // Ngưỡng chi tiết (p99 < 20ms, error rate < 1%, không 5xx do quá tải ngoài 429)
-  // được kiểm tra/điều chỉnh ở Story 6.2-6.4.
-  thresholds: {
-    http_req_failed: ['rate<1'],
-  },
+  thresholds,
 };
 
 export function setup() {

@@ -43,7 +43,9 @@ docker compose --profile k6 run --rm \
 - `VUS` (mặc định `8000`)
 - `DURATION` (mặc định `30s`)
 - `SLEEP_SECONDS` (mặc định `0.1`)
+- `THRESHOLD_P99_MS`: nếu đặt (vd `20`), bật threshold `http_req_duration p(99)<THRESHOLD_P99_MS` (Story 6.2, NFR-01)
+- `THRESHOLD_HTTP_REQ_FAILED_RATE`: ngưỡng `http_req_failed` rate (mặc định `1`; k6 tính 4xx/5xx là failed)
 
 ## Lưu ý
-- Story 6.1 chỉ yêu cầu **viết script** giả lập 8.000 VU đồng thời. Việc đo p99 latency, spike 15.000 RPS, error rate < 1% và đối chiếu success metrics thuộc các story 6.2–6.6.
-- Cần đảm bảo ngưỡng RateLimit, số lượng Inventory, và chiến lược cấp token phù hợp kịch bản benchmark để kết quả phản ánh đúng mục tiêu.
+- Story 6.1: script giả lập 8.000 VU đồng thời. Story 6.2–6.4 dùng cùng script với threshold/env phù hợp để kiểm tra NFR-01/NFR-02/NFR-03.
+- Cần đảm bảo ngưỡng RateLimit, số lượng Inventory, token hợp lệ, và dữ liệu test phù hợp kịch bản benchmark để kết quả phản ánh đúng mục tiêu.
