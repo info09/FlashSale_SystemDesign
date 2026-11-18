@@ -12,11 +12,13 @@ public class CreateHoldCommandHandler : IRequestHandler<CreateHoldCommand, Creat
 {
     private readonly IHoldService _holdService;
 
+    /// <summary>Khởi tạo handler với dịch vụ Hold.</summary>
     public CreateHoldCommandHandler(IHoldService holdService)
     {
         _holdService = holdService;
     }
 
+    /// <summary>Xử lý lệnh tạo hold bằng cách delegate sang <see cref="IHoldService"/>.</summary>
     public async Task<CreateHoldResult> Handle(CreateHoldCommand request, CancellationToken cancellationToken)
     {
         return await _holdService.CreateHoldAsync(request, cancellationToken);

@@ -12,11 +12,13 @@ public class ConfirmHoldCommandHandler : IRequestHandler<ConfirmHoldCommand, Con
 {
     private readonly IHoldService _holdService;
 
+    /// <summary>Khởi tạo handler với dịch vụ Hold.</summary>
     public ConfirmHoldCommandHandler(IHoldService holdService)
     {
         _holdService = holdService;
     }
 
+    /// <summary>Xử lý lệnh confirm hold bằng cách delegate sang <see cref="IHoldService"/>.</summary>
     public async Task<ConfirmHoldResult> Handle(ConfirmHoldCommand request, CancellationToken cancellationToken)
     {
         return await _holdService.ConfirmHoldAsync(request, cancellationToken);

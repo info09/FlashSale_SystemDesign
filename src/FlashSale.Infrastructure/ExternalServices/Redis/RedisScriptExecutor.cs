@@ -1,5 +1,4 @@
 using StackExchange.Redis;
-using System.Linq;
 using System.Reflection;
 
 namespace FlashSale.Infrastructure.ExternalServices.Redis;
@@ -22,7 +21,7 @@ public class RedisScriptExecutor : IRedisScriptExecutor
 
         // Lua script co the tra ve nil (vi du: Inventory het kho).
         if (result.IsNull)
-            return null;
+            return null!;
 
         // Lua script co the tra ve mang [allowed, remaining, resetAfter] hoac mot gia tri don le.
         // StackExchange.Redis bung mang Lua vao mot RedisResult. Dung reflection de lay

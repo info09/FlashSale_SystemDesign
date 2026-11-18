@@ -27,6 +27,9 @@
   <ItemGroup>
     <EmbeddedResource Include="ExternalServices/Redis/Scripts/rate_limit_token_bucket.lua" />
     <EmbeddedResource Include="ExternalServices/Redis/Scripts/atomic_inventory_deduct.lua" />
+    <EmbeddedResource Include="ExternalServices/Redis/Scripts/hold_create.lua" />
+    <EmbeddedResource Include="ExternalServices/Redis/Scripts/hold_confirm.lua" />
+    <EmbeddedResource Include="ExternalServices/Redis/Scripts/hold_release.lua" />
   </ItemGroup>
 
 </Project>

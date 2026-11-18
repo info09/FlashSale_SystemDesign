@@ -21,6 +21,9 @@ public static class DependencyInjection
     {
         var rateLimitLuaScriptContent = GetRateLimitLuaScriptContent();
         var inventoryLuaScriptContent = GetInventoryLuaScriptContent();
+        var holdCreateLuaScriptContent = GetHoldCreateLuaScriptContent();
+        var holdConfirmLuaScriptContent = GetHoldConfirmLuaScriptContent();
+        var holdReleaseLuaScriptContent = GetHoldReleaseLuaScriptContent();
 
         // Đăng ký Redis connection (AbortOnConnectFail = false de Worker co the khoi dong va retry ket noi neu Redis chua san sang)
         var redisConnectionString = configuration["REDIS_CONNECTION_STRING"] ?? "localhost:6379";
@@ -44,6 +47,14 @@ public static class DependencyInjection
         services.AddSingleton<IInventoryRepository>(_ => new RedisInventoryService(
             new RedisScriptExecutor(redisConnection.GetDatabase()),
             inventoryLuaScriptContent,
+            redisConnection.GetDatabase()));
+
+        // Đăng ký HoldRepository (Redis atomic hold/reserve/confirm/release)
+        services.AddSingleton<IHoldRepository>(_ => new RedisHoldService(
+            new RedisScriptExecutor(redisConnection.GetDatabase()),
+            holdCreateLuaScriptContent,
+            holdConfirmLuaScriptContent,
+            holdReleaseLuaScriptContent,
             redisConnection.GetDatabase()));
 
         // Đăng ký PostgreSQLPrimaryContext (ghi Order + Outbox + User qua Identity)
@@ -127,6 +138,39 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
         var resourceName = "FlashSale.Infrastructure.ExternalServices.Redis.Scripts.atomic_inventory_deduct.lua";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+            throw new FileNotFoundException($"Không tìm thấy embedded resource '{resourceName}' trong assembly '{assembly.FullName}'");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private static string GetHoldCreateLuaScriptContent()
+    {
+        var assembly = typeof(DependencyInjection).Assembly;
+        var resourceName = "FlashSale.Infrastructure.ExternalServices.Redis.Scripts.hold_create.lua";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+            throw new FileNotFoundException($"Không tìm thấy embedded resource '{resourceName}' trong assembly '{assembly.FullName}'");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private static string GetHoldConfirmLuaScriptContent()
+    {
+        var assembly = typeof(DependencyInjection).Assembly;
+        var resourceName = "FlashSale.Infrastructure.ExternalServices.Redis.Scripts.hold_confirm.lua";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+            throw new FileNotFoundException($"Không tìm thấy embedded resource '{resourceName}' trong assembly '{assembly.FullName}'");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private static string GetHoldReleaseLuaScriptContent()
+    {
+        var assembly = typeof(DependencyInjection).Assembly;
+        var resourceName = "FlashSale.Infrastructure.ExternalServices.Redis.Scripts.hold_release.lua";
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
             throw new FileNotFoundException($"Không tìm thấy embedded resource '{resourceName}' trong assembly '{assembly.FullName}'");

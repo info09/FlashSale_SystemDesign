@@ -19,6 +19,13 @@ public class HoldService : IHoldService
     private readonly IOutboxService _outboxService;
     private readonly IUnitOfWork _unitOfWork;
 
+    /// <summary>
+    /// Khởi tạo HoldService với các dependency phục vụ tạo/confirm/release hold.
+    /// </summary>
+    /// <param name="holdRepository">Repository thao tác hold (Redis/atomic).</param>
+    /// <param name="informationCustomerRepository">Repository lưu thông tin khách hàng.</param>
+    /// <param name="outboxService">Dịch vụ ghi sự kiện Outbox.</param>
+    /// <param name="unitOfWork">Unit of Work quản lý transaction DB.</param>
     public HoldService(
         IHoldRepository holdRepository,
         IInformationCustomerRepository informationCustomerRepository,
@@ -31,6 +38,7 @@ public class HoldService : IHoldService
         _unitOfWork = unitOfWork;
     }
 
+    /// <inheritdoc />
     public async Task<CreateHoldResult> CreateHoldAsync(CreateHoldCommand command, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(command.ProductId))
@@ -59,6 +67,7 @@ public class HoldService : IHoldService
         };
     }
 
+    /// <inheritdoc />
     public async Task<ConfirmHoldResult> ConfirmHoldAsync(ConfirmHoldCommand command, CancellationToken cancellationToken = default)
     {
         if (command.HoldId == Guid.Empty)
@@ -143,6 +152,7 @@ public class HoldService : IHoldService
             hold.ClientId);
     }
 
+    /// <inheritdoc />
     public async Task<ReleaseHoldResult> ReleaseHoldAsync(ReleaseHoldCommand command, CancellationToken cancellationToken = default)
     {
         if (command.HoldId == Guid.Empty)
