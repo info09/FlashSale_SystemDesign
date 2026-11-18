@@ -1,37 +1,58 @@
-# Thiết kế màn hình — Gọi API mua hàng (FlashSaleShopper)
+# Thiết kế màn hình — Mua hàng / Giữ chỗ (FlashSaleShopper)
 
-**Story:** 7.1 (Phase 7, theo `docs/ux.md` mục 2 — Information Architecture)  
-**Phạm vi:** Thiết kế màn hình/luồng cho `FlashSaleShopper` gọi API mua hàng `FlashSale` qua `ApiGateway`/`OrderPipeline`. Frontend hiện ngoài phạm vi MVP; tài liệu này là đặc tả thiết kế (UI spec/wireframe) để triển khai sau, đồng thời làm rõ mapping với phản hồi HTTP/JSON hiện tại.  
-**Thuật ngữ:** dùng đúng `docs/domain-glossary.md` (FlashSaleShopper, FlashSale, ApiGateway, RateLimit, Inventory, OverSelling, Order, OrderPipeline, Queue, Message, Http202Accepted, BearerToken).
+**Story:** 7.1 (UI hiện tại) + 8.2 (contract/spec cập nhật cho Phase 8, chưa implement)  
+**Phạm vi:** Màn hình `/buy` cho `FlashSaleShopper`. Hiện tại triển khai luồng `POST /api/v1/flash-sale/buy` (chạy song song). Phase 8 bổ sung luồng **Hold/Reservation** theo `docs/plan-hold-reservation-flow.md` và quyết định 8.1.  
+**Thuật ngữ:** dùng đúng `docs/domain-glossary.md` (`FlashSaleShopper`, `Inventory`, `OverSelling`, `Hold`, `HoldExpiry`, `InformationCustomer`, `Order`, `OrderPipeline`, `Http202Accepted`, `RateLimit`, `Outbox`).
 
 ## 1. Mục tiêu và người dùng
 
-- **Người dùng:** FlashSaleShopper (không rành kỹ thuật, cần phản hồi nhanh, rõ ràng).
-- **Mục tiêu:** gửi yêu cầu mua `Product` trong `FlashSale`, nhận kết quả tức thì (thành công nhận đơn / hết hàng / vượt RateLimit / lỗi).
-- **FR liên quan:** FR-01 (RateLimit), FR-02 (AtomicInventoryOffloading/Inventory), FR-03 (đẩy `Message` vào `Queue`, trả `Http202Accepted`), NFR-01/NFR-04.
+- **Người dùng:** FlashSaleShopper.
+- **Mục tiêu:** mua sản phẩm trong `FlashSale` với phản hồi rõ ràng; hỗ trợ giữ chỗ 1 phút để nhập thông tin trước khi xác nhận.
+- **FR/NFR liên quan:** FR-01, FR-02, FR-03, FR-04, NFR-01, NFR-04, NFR-06.
 
 ## 2. Vị trí trong Information Architecture
 
 ```
 Client (FlashSaleShopper)
-└── Gọi API mua hàng (FlashSale)  ← màn hình này
-    ├── Thành công → Http202Accepted (FR-03)
-    ├── Hết hàng → Inventory không đủ / OverSelling (FR-02)
-    ├── Vượt RateLimit → HTTP 429 (FR-01)
-    └── Lỗi hệ thống → thông báo lỗi chung
+└── Mua hàng (/buy)
+    ├── Luồng nhanh hiện tại (song song): POST /api/v1/flash-sale/buy
+    │   ├── 202 Accepted
+    │   ├── 400 INSUFFICIENT_INVENTORY
+    │   ├── 429 RateLimit
+    │   └── 401/5xx
+    └── Luồng Hold (Phase 8)
+        ├── Hold → kiểm tra Redis đủ quantity
+        │   ├── Hết hàng → báo lỗi
+        │   └── Còn hàng → giữ chỗ 60s + form thông tin
+        ├── Confirm submit → Outbox pattern lưu InformationCustomer + publish → consumer tạo Order
+        └── Hủy / hết hạn / reload → trả quantity, nhường chỗ
 ```
 
-## 3. Luồng tương tác (Flow)
+## 3. Luồng tương tác
+
+### 3.1 Luồng hiện tại (`POST /api/v1/flash-sale/buy`, giữ song song)
+- Nhập `productId`, `quantity` → submit.
+- `202`: nhận đơn (`ORDER_ACCEPTED`, `orderId`).
+- `400 INSUFFICIENT_INVENTORY`: hết hàng.
+- `401`: đăng nhập lại.
+- `429`: vượt RateLimit.
+- `5xx`/mạng: lỗi hệ thống, thử lại.
+
+### 3.2 Luồng Hold (Phase 8, thiết kế 8.2)
 
 | Bước | Trạng thái UI | Hành động hệ thống/API | Kết quả hiển thị |
 |---|---|---|---|
-| 1 | Idle (sẵn sàng) | Người dùng nhập/chọn `ProductId`, `Quantity`, nhấn "Mua ngay" | Form enabled |
-| 2 | Loading | Gọi `POST /api/v1/flash-sale/buy` (header `Authorization: Bearer <token>`) | Disable nút, hiển thị loading/skeleton/spinner trên nút hoặc vùng kết quả |
-| 3a | Error - RateLimit | API trả HTTP 429 (FR-01) | Thông báo vượt `RateLimit`, hướng dẫn đợi và thử lại |
-| 3b | Error - Inventory | API trả HTTP 400, hết hàng/`INSUFFICIENT_INVENTORY` (FR-02) | Thông báo hết hàng, **không** hiểu là đã tạo `Order` |
-| 3c | Success - nhận đơn | API trả HTTP 202 `Http202Accepted` (FR-03), message vào `Queue` | Thông báo "Đơn hàng đã được nhận và đang được xử lý" (chưa xử lý xong hoàn toàn) |
-| 3d | Error - xác thực | HTTP 401/403 (token thiếu/không hợp lệ) | Yêu cầu đăng nhập lại/lấy `BearerToken` |
-| 3e | Error - hệ thống | HTTP 5xx, timeout, lỗi mạng | Thông báo lỗi chung, cho phép thử lại |
+| 1 | Idle | Nhập `productId`, `quantity`, bấm "Mua ngay/Giữ chỗ" | Form enabled |
+| 2 | Holding | `POST /api/v1/flash-sale/hold` `{productId, quantity}` | Disable nút, loading |
+| 3a | OutOfStock | 400 `INSUFFICIENT_INVENTORY` (Redis không đủ quantity) | "Sản phẩm đã hết hàng." |
+| 3b | Held | 200/201 `{holdId, expiresAt, ttlSeconds:60}` | Hiển thị form thông tin + countdown 60s + nút Xác nhận/Hủy giữ chỗ |
+| 4 | Confirming | `POST /api/v1/flash-sale/hold/{holdId}/confirm` `{name, phoneNumber, address}` (bắt buộc) | Disable form, loading |
+| 5a | Success | 202/200 (theo contract implement) sau khi tạo Outbox payload | "Đơn hàng đã được nhận và đang được xử lý." |
+| 5b | Expired/Invalid | 409/410 (hết hạn/không hợp lệ/đã dùng) hoặc countdown = 0 / submit khi hết hạn | "Giữ chỗ đã hết hạn. Vui lòng giữ chỗ lại." (quantity được trả/nhường chỗ theo cơ chế hệ thống) |
+| 5c | Cancelled | `POST /api/v1/flash-sale/hold/{holdId}/release` | Nhả slot, quay về Idle |
+| 5d | Auth/RateLimit/Error | 401 / 429 / 400 validation / 5xx | Thông báo tương ứng |
+
+**Ghi chú:** Reload trang làm mất trạng thái hold trên UI (không resume); slot phía server được nhả khi hết hạn/release (`FlashSale.WorkerUnHold` quét 1s). Submit chỉ hợp lệ trong thời gian hold và khi thông tin bắt buộc hợp lệ.
 
 ## 4. Wireframe (mô tả bố cục)
 
@@ -99,26 +120,45 @@ Client (FlashSaleShopper)
 
 ## 6. Trạng thái và copy bắt buộc
 
-| Tình huống | HTTP/Code (API hiện tại) | Copy hiển thị (tiếng Việt) | Kiểu hiển thị |
+| Tình huống | HTTP/Code | Copy hiển thị (tiếng Việt) | Kiểu hiển thị |
 |---|---|---|---|
-| Đang gửi | — | "Đang gửi yêu cầu..." | Loading |
-| Nhận đơn thành công | 202, `ORDER_ACCEPTED` | "Đơn hàng đã được nhận và đang được xử lý." | Success (không nói "đã hoàn tất") |
+| Đang gửi/giữ chỗ/xác nhận | — | "Đang gửi yêu cầu..." / "Đang giữ chỗ..." | Loading |
+| Giữ chỗ thành công | 200/201 (hold) | "Bạn đã giữ chỗ thành công. Vui lòng nhập thông tin trong 1 phút." | Success/Info |
+| Nhận đơn/submit thành công | 202 (`ORDER_ACCEPTED` hoặc tương đương) | "Đơn hàng đã được nhận và đang được xử lý." | Success |
+| Hết hàng | 400 `INSUFFICIENT_INVENTORY` | "Sản phẩm đã hết hàng." | Error |
+| Hết hạn giữ chỗ | 409/410 (hoặc timeout UI) | "Giữ chỗ đã hết hạn. Vui lòng giữ chỗ lại." | Warning/Error |
+| Hold không hợp lệ/đã dùng | 409/410 | "Giữ chỗ không hợp lệ hoặc đã được sử dụng. Vui lòng giữ chỗ lại." | Error |
+| User đã có hold active | 409 (đề xuất `HOLD_ALREADY_EXISTS`) | "Bạn đang có một giữ chỗ đang hoạt động. Vui lòng hoàn tất hoặc hủy giữ chỗ trước." | Warning/Error |
 | Vượt RateLimit | 429 | "Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi và thử lại sau." | Error/Warning |
-| Hết hàng (Inventory) | 400, `INSUFFICIENT_INVENTORY` | "Sản phẩm đã hết hàng. Đơn hàng không được tạo." | Error |
 | Chưa xác thực | 401 | "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại." | Error |
+| Validation | 400 | "Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Địa chỉ." / lỗi trường cụ thể | Error dưới input |
 | Lỗi hệ thống/mạng | 5xx/timeout | "Có lỗi xảy ra. Vui lòng thử lại sau." | Error |
-| Validation (client) | — | "Vui lòng nhập ProductId." / "Quantity phải lớn hơn 0." | Error dưới input |
 
-## 7. Mapping API (phục vụ implement sau)
+## 7. Mapping API (contract 8.2)
 
-- **Endpoint:** `POST /api/v1/flash-sale/buy`
-- **Headers:** `Content-Type: application/json`, `Authorization: Bearer <BearerToken>`
-- **Request body:** `{ "productId": "string", "quantity": 1 }`
-- **Response:**
-  - `202`: `{ "message": "Don hang da duoc nhan va dang xu ly.", "orderId": "...", "code": "ORDER_ACCEPTED" }` → hiển thị copy nhận đơn (mục 6), có thể hiện `orderId`.
-  - `400`: hết kho hoặc request không hợp lệ (`INSUFFICIENT_INVENTORY` / thông báo lỗi) → copy tương ứng.
-  - `401`: chưa xác thực.
-  - `429`: vượt `RateLimit`.
+### 7.1 Hiện tại (song song)
+- `POST /api/v1/flash-sale/buy` body `{ "productId": "string", "quantity": 1 }`
+- `202` `{ message, orderId, code: "ORDER_ACCEPTED", ... }`, `400 INSUFFICIENT_INVENTORY`, `401`, `429`.
+
+### 7.2 Hold Flow (Phase 8)
+- **Create hold:** `POST /api/v1/flash-sale/hold`
+  - Req: `{ "productId": "string", "quantity": 1 }`
+  - 200/201: `{ "holdId": "guid", "productId": "string", "quantity": 1, "expiresAt": "ISO-8601", "ttlSeconds": 60 }`
+  - 400: `INSUFFICIENT_INVENTORY` | validation
+  - 409: `HOLD_ALREADY_EXISTS` (đề xuất)
+  - 401/429
+- **Confirm:** `POST /api/v1/flash-sale/hold/{holdId}/confirm`
+  - Req: `{ "name": "string", "phoneNumber": "string", "address": "string" }` (bắt buộc, non-empty/trim; giới hạn đề xuất Name≤200, PhoneNumber≤20, Address≤500)
+  - 202/200: `{ "status":"accepted", "holdId":"guid", "orderId"|"correlationId":"guid", "message":"..." }` (chi tiết chốt khi implement)
+  - 400: validation (thiếu/trống/sai định dạng)
+  - 404/409/410: `HOLD_NOT_FOUND` | `HOLD_INVALID` | `HOLD_EXPIRED` | `HOLD_CONSUMED` | `HOLD_NOT_OWNED` (bộ mã lỗi cụ thể chốt khi implement)
+  - 401/429/5xx
+- **Release:** `POST /api/v1/flash-sale/hold/{holdId}/release`
+  - 200/204: released/idempotent
+  - 404/409/410: not found/invalid/expired/consumed (idempotent nếu đã release)
+
+**Redis/Lua (thiết kế):** `inventory:{productId}`, `hold:{holdId}`, `hold:user:{clientId}`, `holds:expiring` (ZSET). Scripts: `hold_create.lua`, `hold_confirm.lua`, `hold_release.lua` hoặc `hold_release_if_expired.lua`.
+**Outbox/message (flow chuẩn):** confirm tạo Outbox payload; Outbox processor lưu `InformationCustomer` và publish message; consumer tạo `Order` (idempotent). Payload đề xuất chứa `holdId`, `correlationId/orderId`, `productId`, `quantity`, `clientId`, `name`, `phoneNumber`, `address`, `occurredOn`.
 
 ## 8. Design tokens & Accessibility (tóm tắt áp dụng)
 

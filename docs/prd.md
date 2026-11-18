@@ -21,26 +21,29 @@ Mục tiêu của dự án: xây dựng Backend API Core và pipeline xử lý �
 
 ## 3. Phạm vi (Scope)
 
-| Trong phạm vi (MVP) | Ngoài phạm vi (giai đoạn sau) |
-|---------------------|------------------------------|
-| Distributed Rate Limiting trên API Gateway qua Redis Lua Script (Token Bucket). | Giao diện UI/Frontend cho người dùng cuối. |
-| Atomic Inventory Offloading: trừ kho tức thời trên Redis RAM qua Lua Script (chống over-selling, latency p99 ~18ms). | Tích hợp cổng thanh toán trực tuyến (VNPay, Momo, Stripe, v.v.). |
-| Event-Driven Order Pipeline: đẩy công việc tạo đơn vào RabbitMQ Queue, trả về 202 Accepted ngay cho client. | Hệ thống quản lý sản phẩm, danh mục, khuyến mãi chi tiết (Catalog / Coupon Service). |
-| Reliable Async Worker: tiêu thụ queue, ghi đơn hàng vào PostgreSQL Primary bằng Transactional Outbox Pattern. | Tích hợp nhà vận chuyển / Logistic pipeline. |
+| Trong phạm vi (MVP/đang triển khai) | Ngoài phạm vi (giai đoạn sau) |
+|-------------------------------------|------------------------------|
+| Distributed Rate Limiting trên API Gateway qua Redis Lua Script (Token Bucket). | Tích hợp cổng thanh toán trực tuyến (VNPay, Momo, Stripe, v.v.). |
+| Atomic Inventory Offloading: trừ kho/giữ chỗ tức thời trên Redis qua Lua Script (chống over-selling). | Hệ thống quản lý sản phẩm, danh mục, khuyến mãi chi tiết (Catalog / Coupon Service). |
+| Event-Driven Order Pipeline: đẩy công việc tạo đơn vào RabbitMQ Queue, trả về 202 Accepted ngay cho client. | Tích hợp nhà vận chuyển / Logistic pipeline. |
+| Reliable Async Worker: tiêu thụ queue, ghi đơn hàng vào PostgreSQL Primary bằng Transactional Outbox Pattern. | |
 | Resilience & DLQ: Retry với Exponential Backoff, DLQ cho message lỗi sau 3 lần thử. | |
 | Benchmarking & Monitoring: bộ k6 Load Test (giả lập 8.000 VUs) và Grafana Dashboard xuất metric Prometheus. | |
+| **Phase 8 (Hold/Reservation Flow, đã chốt 8.1/8.2, chưa implement):** giữ chỗ 1 phút trước khi xác nhận mua; lưu thông tin khách hàng `InformationCustomer`; worker `FlashSale.WorkerUnHold` nhả slot hết hạn. | |
 
 ## 4. Functional Requirements (FR)
 
 Mã FR dùng định dạng FR-XX, không thay đổi sau này để docs/architecture.md và docs/status.md có thể trace ngược.
 
-- **FR-01:** Khi client gửi request mua hàng đến API Gateway, hệ thống phải kiểm tra rate limit bằng Redis Lua Script (Token Bucket) trước khi xử lý tiếp; nếu vượt ngưỡng, trả về HTTP 429 ngay lập tức mà không gọi xuống dịch vụ hạ tầng.
-- **FR-02:** Khi rate limit cho phép, hệ thống phải trừ kho tức thời trên Redis qua Lua Script atomic; nếu tồn kho không đủ, trả về lỗi hết hàng ngay lập tức mà không tạo đơn.
-- **FR-03:** Sau khi trừ kho thành công trên Redis, hệ thống phải đẩy thông tin tạo đơn vào RabbitMQ Queue và trả về HTTP 202 Accepted cho client ngay lập tức (không chờ xử lý hoàn tất).
-- **FR-04:** Async Worker phải tiêu thụ message từ RabbitMQ, ghi đơn hàng vào PostgreSQL Primary và ghi sự kiện vào Outbox table trong cùng một transaction database (Transactional Outbox Pattern).
+- **FR-01:** Khi client gửi request mua hàng/giữ chỗ đến API Gateway, hệ thống phải kiểm tra rate limit bằng Redis Lua Script (Token Bucket) trước khi xử lý tiếp; nếu vượt ngưỡng, trả về HTTP 429 ngay lập tức mà không gọi xuống dịch vụ hạ tầng.
+- **FR-02:** Khi rate limit cho phép, hệ thống phải kiểm tra và thao tác tồn kho (`Inventory`) trên Redis qua Lua Script atomic: không đủ quantity thì trả lỗi hết hàng (`INSUFFICIENT_INVENTORY`) ngay, không tạo hold/đơn; đủ quantity thì thực hiện thao tác theo luồng được chọn (trừ kho ngay ở luồng `/buy` hiện tại, hoặc **reserve giữ chỗ** ở luồng Hold Phase 8) để chống `OverSelling`.
+- **FR-03:** Sau khi thao tác kho/giữ chỗ thành công, hệ thống phải đưa yêu cầu vào luồng bất đồng bộ qua RabbitMQ (`OrderPipeline`) và trả phản hồi chấp nhận nhanh cho client (ví dụ `Http202Accepted` ở luồng hiện tại), không chờ xử lý hoàn tất. Với **Hold Flow (Phase 8, chốt 8.1/8.2)**: hold thành công trả thông tin giữ chỗ (TTL 60s); submit confirm tạo payload Outbox, Outbox pattern lưu `InformationCustomer` và publish message, consumer RabbitMQ tạo `Order`.
+- **FR-04:** Async Worker/consumer phải tiêu thụ message từ RabbitMQ và ghi dữ liệu vào PostgreSQL Primary theo Transactional Outbox Pattern, đảm bảo tính nhất quán (không mất đơn/sự kiện đã chấp nhận). Luồng hiện tại: ghi `Order` + `Outbox` trong cùng transaction khi consume message tạo đơn. Luồng Hold (Phase 8): consumer tạo `Order` từ message đã publish qua Outbox pattern (chi tiết transaction/idempotency cụ thể hóa ở thiết kế triển khai).
 - **FR-05:** Nếu xử lý message thất bại, Worker phải retry với Exponential Backoff; sau 3 lần thử vẫn lỗi, message phải được chuyển vào Dead Letter Queue (DLQ).
-- **FR-06:** Hệ thống phải cung cấp endpoint health check và metric Prometheus để Grafana Dashboard theo dõi latency, error rate, queue depth, inventory remaining.
+- **FR-06:** Hệ thống phải cung cấp endpoint health check và metric Prometheus để Grafana Dashboard theo dõi latency, error rate, queue depth, DLQ size, inventory remaining. (`InventoryRemaining` trong luồng Hold phản ánh tồn kho khả dụng để giữ/chốt sau reserve).
 - **FR-07:** Bộ k6 Load Test phải giả lập tối đa 8.000 Concurrent Virtual Users (VUs) để benchmark hệ thống trước khi triển khai sản xuất.
+
+> **Bổ sung Phase 8 (đã chốt 8.1/8.2, chưa implement):** luồng giữ chỗ 1 phút (`POST /api/v1/flash-sale/hold`, `confirm`, `release`), 1 user/1 hold, TTL 60s, worker `FlashSale.WorkerUnHold` quét mỗi 1s để nhả slot (`holds:expiring` + Lua `release_if_expired`), lưu `InformationCustomer` khi submit hợp lệ, endpoint `POST /api/v1/flash-sale/buy` chạy song song. Chi tiết: `docs/plan-hold-reservation-flow.md`, `docs/architecture.md`, `docs/ux-flashsale-buy-screen.md`.
 
 [CẦN LÀM RÕ] Ngưỡng rate limit cụ thể là bao nhiêu request/giây per customer hay per IP (input chỉ nêu tổng thể 15.000 RPS spike, chưa chia nhỏ per client).
 

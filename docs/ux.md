@@ -17,18 +17,27 @@ Các nguyên tắc dưới đây gắn trực tiếp với persona trong `docs/p
 Sơ đồ cây điều hướng (dựa trên thành phần đã chốt trong `docs/architecture.md`). Mỗi nút map với FR trong `docs/prd.md`.
 
 ```
-Client (FlashSaleShopper / FlashSaleShopper)
-└── Gọi API mua hàng (FlashSale)
-    ├── Thành công → nhận Http202Accepted (FR-03)
-    ├── Hết hàng → thông báo Inventory không đủ (FR-02)
-    ├── Vượt RateLimit → thông báo HTTP 429 (FR-01)
-    └── Lỗi hệ thống → thông báo lỗi chung
+Client (FlashSaleShopper)
+├── Gọi API mua hàng nhanh (hiện tại, chạy song song) — POST /api/v1/flash-sale/buy
+│   ├── Thành công → Http202Accepted (FR-03)
+│   ├── Hết hàng → Inventory không đủ / OverSelling (FR-02)
+│   ├── Vượt RateLimit → HTTP 429 (FR-01)
+│   └── Lỗi hệ thống/xác thực → thông báo lỗi
+└── Luồng Giữ chỗ (Phase 8, đã chốt 8.1/8.2)
+    ├── Bấm "Mua ngay/Giữ chỗ" → kiểm tra Redis đủ quantity
+    │   ├── Hết hàng → thông báo hết hàng
+    │   └── Còn hàng → giữ chỗ (TTL 60s), hiển thị bảng nhập thông tin
+    ├── Nhập Họ tên, Phone, Địa chỉ (bắt buộc) + countdown
+    │   ├── Hủy giữ chỗ → nhả slot
+    │   ├── Hết 1 phút / reload / submit khi hết hạn → trả quantity, nhường chỗ
+    │   └── Submit hợp lệ → tạo Outbox payload, lưu InformationCustomer, publish message, consumer tạo Order
+    └── Kết quả: đã nhận xử lý / hết hạn / lỗi
 
 DevOps (Kỹ sư vận hành hệ thống)
-└── Grafana Dashboard
+└── Grafana Dashboard / Ops
     ├── Xem Metric: P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining (FR-06, NFR-07)
-    ├── Xem HealthCheck của ApiGateway và AsyncWorker (FR-06)
-    └── Quản lý DeadLetterQueue: xem, retry, purge (FR-05, NFR-07)
+    ├── Xem HealthCheck của ApiGateway và Worker (FR-06)
+    └── Quản lý DeadLetterQueue/Outbox (xem, retry/purge theo khả năng hệ thống)
 ```
 
 **Tên màn hình/chính theo đúng thuật ngữ trong `docs/domain-glossary.md`:**
@@ -49,20 +58,26 @@ DevOps (Kỹ sư vận hành hệ thống)
 
 Vì UI frontend out of scope trong MVP, luồng chính hiện tại là phản hồi HTTP/API mà `FlashSaleShopper` nhận. Dưới đây là mô tả các trạng thái bắt buộc phải có khi implement (dù là JSON body hay giao diện trực quan sau này).
 
-### Luồng A: FlashSaleShopper đặt mua hàng (FR-01, FR-02, FR-03)
+### Luồng A1: Mua hàng nhanh hiện tại (chạy song song) — `POST /api/v1/flash-sale/buy`
 
 | Bước | Trạng thái | Mô tả | Thuật ngữ hiển thị bắt buộc |
 |------|-----------|-------|---------------------------|
-| 1 | Gửi request | Người dùng nhấn nút mua hàng trong `FlashSale` | — |
-| 2 | Kiểm tra RateLimit | `ApiGateway` kiểm tra `RateLimit` qua `TokenBucket` | — |
-| 3a | Lỗi: vượt RateLimit | Trả HTTP 429, thông báo "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau." | `RateLimit` |
-| 3b | Tiếp tục | Cho phép xử lý tiếp | — |
-| 4 | Kiểm tra Inventory | `AtomicInventoryOffloading` trừ kho trên Redis qua `LuaScript` | — |
-| 5a | Lỗi: hết hàng | Trả lỗi "Sản phẩm đã hết hàng." Không tạo `Order`. | `Inventory`, `OverSelling` |
-| 5b | Thành công | Trừ kho thành công | — |
-| 6 | Đẩy vào Queue | Đưa `Message` vào `Queue` trên `RabbitMQ` | `OrderPipeline`, `Queue` |
-| 7 | Trả về client | Trả `Http202Accepted` ngay, không chờ xử lý xong | `Http202Accepted` |
-| 8 | Trạng thái đơn | Nếu có UI hiển thị: "Đơn hàng đã được nhận, đang xử lý." | `Order` |
+| 1 | Gửi request | Người dùng bấm "Mua ngay" | — |
+| 2 | Kiểm tra RateLimit | `ApiGateway` kiểm tra `RateLimit` | `RateLimit` |
+| 3 | Kiểm tra Inventory | Trừ kho atomic trên Redis; không đủ → hết hàng | `Inventory`, `OverSelling` |
+| 4 | Nhận đơn | Publish `Message` vào `Queue`, trả `Http202Accepted` | `OrderPipeline`, `Http202Accepted`, `Order` |
+
+### Luồng A2: Giữ chỗ 1 phút (Phase 8, đã chốt 8.1/8.2)
+
+| Bước | Trạng thái | Mô tả | Thuật ngữ hiển thị bắt buộc |
+|------|-----------|-------|---------------------------|
+| 1 | Bấm giữ chỗ | Gọi hold, kiểm tra Redis đủ quantity | `Inventory` |
+| 2a | Hết hàng | Không đủ quantity → báo "Sản phẩm đã hết hàng." | `Inventory` |
+| 2b | Giữ chỗ thành công | Reserve/giữ chỗ TTL 60s, trả `holdId/expiresAt` | `Hold` |
+| 3 | Nhập thông tin | Form Họ tên, Số điện thoại, Địa chỉ (bắt buộc) + countdown | `InformationCustomer` |
+| 4a | Hủy giữ chỗ | User bấm hủy → release, trả quantity | `Hold`, `Inventory` |
+| 4b | Hết hạn / reload / submit muộn | Không submit trong 1 phút hoặc reload → quantity được trả lại/nhường chỗ; submit khi hết hạn bị từ chối | `HoldExpiry`, `Inventory` |
+| 4c | Submit hợp lệ | Tạo Outbox payload; Outbox pattern lưu `InformationCustomer` và publish message; consumer tạo `Order` | `Outbox`, `InformationCustomer`, `Order`, `OrderPipeline` |
 
 **Trạng thái bắt buộc không được thiếu:** loading (đang xử lý request), empty (không có dữ liệu), error (hết hàng, vượt rate limit, lỗi hệ thống), success (đã nhận 202 Accepted).
 
@@ -188,8 +203,10 @@ Mức tối thiểu chấp nhận được (không viết như checklist WCAG đ
 | Tình huống | Copy đúng (tiếng Việt) | Thuật ngữ chuẩn đính kèm |
 |------------|------------------------|--------------------------|
 | Vượt RateLimit | "Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi và thử lại sau." | `RateLimit` |
-| Hết hàng | "Sản phẩm đã hết hàng. Đơn hàng không được tạo." | `Inventory`, `OverSelling` |
-| Nhận đơn thành công | "Đơn hàng đã được nhận và đang được xử lý." | `Order`, `Http202Accepted` |
+| Hết hàng | "Sản phẩm đã hết hàng." (hoặc kèm "Đơn hàng không được tạo." ở luồng `/buy` hiện tại) | `Inventory`, `OverSelling` |
+| Giữ chỗ thành công | "Bạn đã giữ chỗ thành công. Vui lòng nhập thông tin trong 1 phút." | `Hold` |
+| Hết hạn giữ chỗ | "Giữ chỗ đã hết hạn. Vui lòng giữ chỗ lại." | `HoldExpiry`, `Hold` |
+| Nhận đơn/submit thành công | "Đơn hàng đã được nhận và đang được xử lý." | `Order`, `Http202Accepted` |
 | Lỗi hệ thống | "Có lỗi xảy ra. Vui lòng thử lại sau." | — |
 | DLQ có message | "Có message lỗi cần xử lý trong DeadLetterQueue." | `DeadLetterQueue` |
 | Inventory thấp | "Cảnh báo: tồn kho Inventory đang thấp." | `Inventory`, `InventoryRemaining` |

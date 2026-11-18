@@ -20,23 +20,27 @@
 | Lua Script / `LuaScript` | Script Lua chạy trên Redis để thực thi thao tác nguyên tử (atomic) cho Rate Limit và Inventory Offloading. | lua, script lua, redis script | Redis, Rate Limit, Inventory |
 | Client / `Client` | Bản thể gửi request đến API Gateway (trong ngữ cảnh này là Flash Sale Shopper gọi API). | người dùng, user, khách hàng, customer, caller, end user | API Gateway, FlashSaleShopper |
 
-### Domain: Inventory (Kho hàng)
+### Domain: Inventory (Kho hàng) & Hold
 
 | Thuật ngữ chuẩn | Định nghĩa | KHÔNG được gọi là | Thuật ngữ liên quan |
 |-----------------|------------|-------------------|---------------------|
-| Inventory / `Inventory` | Số lượng tồn kho của sản phẩm lưu trên Redis RAM, được trừ atomic qua Lua Script. | stock, tồn kho, kho hàng, quantity, exist_quantity, available_quantity | Product, AtomicInventoryOffloading, OverSelling |
-| Atomic Inventory Offloading / `AtomicInventoryOffloading` | Quy trình trừ kho tức thời trên Redis qua Lua Script để chống over-selling, latency p99 ~18ms. | atomic_inventory_offloading, trừ kho, offload kho, giảm kho atomic | Inventory, Lua Script, OverSelling |
-| Over-selling / `OverSelling` | Tình trạng bán vượt quá số lượng tồn kho thực do Race Condition khi nhiều request đọc tồn kho >0 cùng lúc trước khi bất kỳ request nào trừ kho. | overselling, bán vượt tồn kho, vượt kho, over_sell, bán trượt | Inventory, RaceCondition, AtomicInventoryOffloading |
+| Inventory / `Inventory` | Số lượng tồn kho khả dụng của sản phẩm lưu trên Redis, được kiểm tra/trừ/reserve atomic qua Lua Script. Trong luồng Hold, `Inventory` phản ánh số lượng còn có thể giữ/chốt (available sau reserve). | stock, tồn kho, kho hàng, quantity, exist_quantity, available_quantity | Product, AtomicInventoryOffloading, OverSelling, Hold |
+| Atomic Inventory Offloading / `AtomicInventoryOffloading` | Quy trình thao tác tồn kho tức thời trên Redis qua Lua Script (trừ kho hoặc reserve giữ chỗ) để chống over-selling. | atomic_inventory_offloading, trừ kho, offload kho, giảm kho atomic | Inventory, Lua Script, OverSelling, Hold |
+| Over-selling / `OverSelling` | Tình trạng bán/giữ vượt quá số lượng tồn kho thực do Race Condition. | overselling, bán vượt tồn kho, vượt kho, over_sell, bán trượt | Inventory, RaceCondition, AtomicInventoryOffloading |
+| Giữ chỗ / `Hold` | Trạng thái giữ chỗ tạm thời (TTL 60s) sau khi kiểm tra Redis còn đủ quantity; reserve `Inventory` để chặn người khác lấy slot, chờ người dùng nhập thông tin và xác nhận. | reservation, booking, giữ hàng, lock, đặt chỗ | Inventory, HoldExpiry, FlashSaleShopper, Order |
+| Hết hạn giữ chỗ / `HoldExpiry` | Sự kiện/trạng thái hold hết thời gian (1 phút) mà chưa confirm; hệ thống nhả slot và trả lại quantity cho `Inventory`. | hold timeout, expired hold, hết hạn reservation | Hold, WorkerUnHold, Inventory |
+| Worker nhả giữ chỗ / `WorkerUnHold` | Worker nền quét hold hết hạn định kỳ (mỗi 1s) và thực hiện release idempotent để trả quantity về `Inventory`. | unhold worker, hold release worker | Hold, HoldExpiry, Inventory |
 
 ### Domain: Order (Đơn hàng) & Pipeline
 
 | Thuật ngữ chuẩn | Định nghĩa | KHÔNG được gọi là | Thuật ngữ liên quan |
 |-----------------|------------|-------------------|---------------------|
 | Flash Sale / `FlashSale` | Chiến dịch bán flash gây spike traffic (15.000 RPS), sản phẩm có tồn kho giới hạn. | flash sale, chiến dịch bán flash, giảm giá flash, sale, km | Product, Spike, Order |
-| Order / `Order` | Đơn hàng được tạo sau khi trừ kho thành công trên Redis, ghi vào PostgreSQL Primary qua Async Worker. | đơn, đơn hàng, order_item, purchase, transaction, sale, hoa don | FlashSale, Inventory, AsyncWorker, Outbox |
-| Fast-path / `FastPath` | Luồng nhận đơn từ request đến trả về HTTP 202 Accepted, mục tiêu p99 latency <20ms. | luồng nhanh, fast path, critical path, đường dẫn nhanh | Order, 202 Accepted, P99Latency |
-| Event-Driven Order Pipeline / `OrderPipeline` | Pipeline đẩy công việc tạo đơn vào RabbitMQ Queue và trả về 202 Accepted ngay cho client. | order pipeline, pipeline đơn hàng, sự kiện-driven pipeline | Order, RabbitMQ, Queue, 202 Accepted |
-| 202 Accepted / `Http202Accepted` | Mã HTTP trả về ngay cho client sau khi đẩy đơn vào RabbitMQ, không chờ xử lý hoàn tất. | 202, accepted, async accepted, http_202 | OrderPipeline, AsyncWorker, Fast-path |
+| Order / `Order` | Đơn hàng được tạo qua luồng bất đồng bộ (consumer/worker) sau khi yêu cầu mua/giữ chỗ được chấp nhận hợp lệ. | đơn, đơn hàng, order_item, purchase, transaction, sale, hoa don | FlashSale, Inventory, Hold, AsyncWorker, Outbox |
+| Fast-path / `FastPath` | Luồng xử lý nhanh phía API (kiểm tra rate limit, thao tác inventory/hold, phản hồi nhanh), mục tiêu độ trễ thấp. | luồng nhanh, fast path, critical path, đường dẫn nhanh | Order, Hold, 202 Accepted, P99Latency |
+| Event-Driven Order Pipeline / `OrderPipeline` | Pipeline xử lý đơn hàng bất đồng bộ qua RabbitMQ/Outbox/consumer (publish message, xử lý tạo Order). | order pipeline, pipeline đơn hàng, sự kiện-driven pipeline | Order, RabbitMQ, Queue, Outbox, 202 Accepted |
+| 202 Accepted / `Http202Accepted` | Mã HTTP phản hồi chấp nhận yêu cầu xử lý bất đồng bộ (không chờ hoàn tất). | 202, accepted, async accepted, http_202 | OrderPipeline, AsyncWorker, Fast-path |
+| Thông tin khách hàng / `InformationCustomer` | Thông tin người mua nhập khi confirm giữ chỗ (Họ tên, Số điện thoại, Địa chỉ), lưu trong bảng `InformationCustomer` để phục vụ tạo/xử lý `Order`. | customer info, buyer info, shipping info | Hold, Order, FlashSaleShopper |
 
 ### Domain: Messaging (RabbitMQ)
 
@@ -78,7 +82,7 @@
 | Error Rate / `ErrorRate` | Tỷ lệ lỗi tổng thể của hệ thống, mục tiêu dưới 1% khi 8.000 VUs. | error_rate, tỷ lệ lỗi, lỗi率, error percentage | P99Latency, Metric |
 | Queue Depth / `QueueDepth` | Số lượng message đang chờ trong RabbitMQ Queue. | queue_depth, số lượng message trong hàng đợi, antrian depth | Queue, Metric |
 | DLQ Size / `DlqSize` | Số lượng message đang chứa trong Dead Letter Queue. | dlq_size, kích thước dlq, số message dlq | DeadLetterQueue, Metric |
-| Inventory Remaining / `InventoryRemaining` | Số lượng tồn kho còn lại trên Redis. | inventory_remaining, số lượng tồn kho còn lại, remaining_stock, kho còn | Inventory, Metric |
+| Inventory Remaining / `InventoryRemaining` | Số lượng tồn kho khả dụng còn lại trên Redis để giữ/chốt (available sau reserve hold; tăng lại khi nhả slot/hết hạn). | inventory_remaining, số lượng tồn kho còn lại, remaining_stock, kho còn | Inventory, Hold, Metric |
 | SLA / `SLA` | Cam kết mức dịch vụ: p99 latency luồng nhận đơn <20ms. | sla, service_level_agreement, cam kết chất lượng dịch vụ | P99Latency, Uptime |
 | Uptime / `Uptime` | Thời gian hệ thống hoạt động liên tục mà không ngừng. | uptime, thời gian hoạt động, sẵn sàng, availability | SLA |
 
