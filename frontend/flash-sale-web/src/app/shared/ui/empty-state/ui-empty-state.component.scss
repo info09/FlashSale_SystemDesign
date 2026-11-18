@@ -2,12 +2,12 @@
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 8px;
-  color: #475569;
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
-  border: 1px dashed #cbd5e1;
-  border-radius: 14px;
-  padding: 20px 16px;
+  gap: var(--space-sm);
+  color: #166534;
+  background: linear-gradient(180deg, #ecfdf5, #dcfce7);
+  border: 1px dashed rgba(74, 222, 128, 0.22);
+  border-radius: 12px;
+  padding: var(--space-lg) var(--space-md);
 }
 
 .ui-empty-icon {
@@ -18,27 +18,29 @@
 .ui-empty-title {
   margin: 0;
   font-weight: 600;
-  color: #334155;
+  color: #166534;
+  font-size: var(--font-size-body);
 }
 
 .ui-empty-desc {
   margin: 0;
-  font-size: 14px;
-  color: #64748b;
+  font-size: var(--font-size-caption);
+  color: #15803d;
 }
 
 .ui-empty-action {
-  margin-top: 4px;
-  min-height: 40px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 10px;
-  background: #e2e8f0;
-  color: #0f172a;
+  margin-top: var(--space-xs);
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #e5e7eb;
+  color: var(--color-text);
   font-weight: 600;
+  font-size: var(--font-size-body);
   cursor: pointer;
 }
 
 .ui-empty-action:hover {
-  background: #cbd5e1;
+  background: #d1d5db;
 }

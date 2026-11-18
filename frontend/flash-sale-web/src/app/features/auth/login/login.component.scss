@@ -1,92 +1,82 @@
 .card {
   background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(74, 222, 128, 0.12);
   border-radius: 20px;
-  padding: 28px;
+  padding: var(--space-lg);
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(6px);
 }
 
 .login-card {
   max-width: 460px;
-  margin: 24px auto 0;
+  margin: var(--space-lg) auto 0;
 }
 
 .card-hero {
-  margin-bottom: 22px;
+  margin-bottom: var(--space-lg);
 }
 
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
-  margin-bottom: 12px;
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-sm);
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-overline);
   letter-spacing: 0.3px;
-  color: #4338ca;
-  background: #e0e7ff;
+  text-transform: uppercase;
+  color: #166534;
+  background: linear-gradient(135deg, #d1fae5, #dcfce7);
+  border: 1px solid rgba(74, 222, 128, 0.18);
 }
 
 h1 {
-  margin: 0 0 8px;
-  font-size: 30px;
-  line-height: 1.15;
-  color: #0f172a;
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-h1);
+  line-height: 1.2;
+  color: var(--color-text);
 }
 
 .subtitle {
   margin: 0;
-  color: var(--muted);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
 }
 
 form {
   display: grid;
-  gap: 16px;
-}
-
-.field {
-  display: grid;
-  gap: 7px;
-}
-
-.field span {
-  font-weight: 600;
-  color: #334155;
+  gap: var(--space-md);
 }
 
 input {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-input:hover {
-  border-color: #cbd5e1;
-}
-
+input:hover { border-color: #34d399; }
 input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--ring);
-}
-
-.field-error {
-  color: var(--error);
-  font-size: 12px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--ring), none;
 }
 
 .alert {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border-radius: 12px;
   border: 1px solid transparent;
+  font-size: var(--font-size-body);
 }
 
 .alert-icon {
@@ -97,55 +87,44 @@ input:focus {
   place-items: center;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--font-size-caption);
   color: #fff;
-  background: var(--error);
+  background: var(--color-error);
 }
 
 .alert.error {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
 }
 
 .btn {
-  min-height: 46px;
-  border: none;
+  min-height: 44px;
+  border: 1px solid transparent;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: var(--space-sm) var(--space-md);
   font-weight: 700;
+  font-size: var(--font-size-body);
   cursor: pointer;
   transition: transform 0.08s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .btn.primary {
-  color: #fff;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+  color: #052e16;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 18px rgba(74, 222, 128, 0.18), 0 10px 20px rgba(34, 197, 94, 0.1);
 }
 
 .btn.primary:hover:not(:disabled) {
-  filter: brightness(1.03);
-  box-shadow: 0 14px 24px rgba(99, 102, 241, 0.38);
+  filter: brightness(1.04);
+  box-shadow: 0 0 24px rgba(74, 222, 128, 0.22), 0 12px 24px rgba(34, 197, 94, 0.12);
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; }
 
-.btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
+/* Mobile: < 768px */
 @media (max-width: 767px) {
-  .card {
-    padding: 20px;
-    border-radius: 16px;
-  }
-
-  h1 {
-    font-size: 26px;
-  }
+  .card { padding: var(--space-md); border-radius: 16px; }
+  .login-card { margin-top: var(--space-md); }
 }

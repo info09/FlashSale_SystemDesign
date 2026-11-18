@@ -1,16 +1,16 @@
 .ui-form-field {
   display: grid;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 
 .ui-label {
   font-weight: 600;
-  color: #334155;
-  font-size: 14px;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
 }
 
 .req {
-  color: var(--error, #ef4444);
+  color: var(--color-error);
   margin-left: 2px;
 }
 
@@ -22,33 +22,48 @@
 :host ::ng-deep select,
 :host ::ng-deep textarea {
   width: 100%;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+}
+
+:host ::ng-deep input:focus,
+:host ::ng-deep select:focus,
+:host ::ng-deep textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--ring);
 }
 
 .ui-error {
-  color: var(--error, #ef4444);
-  font-size: 12px;
+  color: var(--color-error);
+  font-size: var(--font-size-caption);
 }
 
 .ui-hint {
-  color: var(--muted, #64748b);
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
 }
 
 .has-error :host ::ng-deep input,
 .has-error :host ::ng-deep select,
 .has-error :host ::ng-deep textarea {
-  border-color: var(--error, #ef4444);
+  border-color: var(--color-error);
 }
 
 .ui-inline-spinner {
   position: absolute;
-  right: 10px;
+  right: var(--space-sm);
   top: 50%;
   width: 14px;
   height: 14px;
   margin-top: -7px;
   border: 2px solid #cbd5e1;
-  border-top-color: var(--primary, #6366f1);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: ui-spin 0.8s linear infinite;
 }
