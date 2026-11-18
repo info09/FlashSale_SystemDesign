@@ -1,0 +1,23 @@
+# Docker Compose override cho môi trường staging (Story 6.5, FR-07/NFR-01..03).
+# Kết hợp với docker-compose.yml để chạy k6 và benchmark trên cấu hình staging.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile k6 run --rm \
+#     -e BASE_URL=http://flashsale-api:8080 -e ACCESS_TOKEN=<JWT> -e PRODUCT_ID=<id> \
+#     flashsale-k6 run /scripts/flashsale-buy.js
+
+services:
+  flashsale-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Staging
+      - RATE_LIMIT_RPS=${RATE_LIMIT_RPS:-1000}
+
+  flashsale-worker:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Staging
+
+  flashsale-k6:
+    environment:
+      - BASE_URL=${K6_BASE_URL:-http://flashsale-api:8080}
+      - DURATION=${K6_DURATION:-30s}
+      - VUS=${K6_VUS:-50}
