@@ -67,4 +67,35 @@ public class OrderCreatedMessageTests
         json.Should().Contain("clientId");
         json.Should().Contain("orderStatus");
     }
+
+    [Fact]
+    public void CreateFromHoldConfirmation_ShouldIncludeHoldAndCustomerInfo()
+    {
+        var holdId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+        var correlationId = orderId;
+        var occurredOn = DateTimeOffset.UtcNow;
+
+        var message = OrderCreatedMessage.CreateFromHoldConfirmation(
+            holdId,
+            orderId,
+            "product-1",
+            2,
+            "client-1",
+            "Nguyen Van A",
+            "0900000000",
+            "Ha Noi",
+            correlationId,
+            occurredOn);
+
+        message.CorrelationId.Should().Be(correlationId);
+        var json = message.ToJson();
+        json.Should().Contain(holdId.ToString());
+        json.Should().Contain(orderId.ToString());
+        json.Should().Contain("product-1");
+        json.Should().Contain("client-1");
+        json.Should().Contain("Nguyen Van A");
+        json.Should().Contain("0900000000");
+        json.Should().Contain("Ha Noi");
+    }
 }

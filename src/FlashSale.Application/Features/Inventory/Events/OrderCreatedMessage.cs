@@ -34,6 +34,39 @@ public record OrderCreatedMessage
         };
     }
 
+    public static OrderCreatedMessage CreateFromHoldConfirmation(
+        Guid holdId,
+        Guid orderId,
+        string productId,
+        int quantity,
+        string clientId,
+        string name,
+        string phoneNumber,
+        string address,
+        Guid correlationId,
+        DateTimeOffset occurredOn)
+    {
+        return new OrderCreatedMessage
+        {
+            CorrelationId = correlationId,
+            MessageId = Guid.NewGuid(),
+            OccurredOn = occurredOn,
+            Payload = new
+            {
+                holdId,
+                orderId,
+                correlationId,
+                productId,
+                quantity,
+                clientId,
+                name,
+                phoneNumber,
+                address,
+                occurredOn
+            }
+        };
+    }
+
     public string ToJson()
     {
         return JsonSerializer.Serialize(this);

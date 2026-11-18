@@ -1,6 +1,8 @@
 ﻿using FlashSale.Application.Features.Auth.CommandHandlers;
 using FlashSale.Application.Features.Auth.Commands;
 using FlashSale.Application.Features.Auth.Validators;
+using FlashSale.Application.Features.Hold.Commands;
+using FlashSale.Application.Features.Hold.Validators;
 using FlashSale.Application.Features.Inventory.Commands;
 using FlashSale.Application.Features.Inventory.Validators;
 using FlashSale.Application.Features.RateLimit.Commands;
@@ -26,6 +28,9 @@ public static class DependencyInjection
 
         // Đăng ký InventoryService
         services.AddScoped<IInventoryService, InventoryService>();
+
+        // Đăng ký HoldService
+        services.AddScoped<IHoldService, HoldService>();
 
         // Đăng ký Auth Commands & Validators
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RegisterCommandHandler).Assembly));
@@ -56,6 +61,9 @@ public static class DependencyInjection
         services.AddSingleton<IValidator<DeductInventoryCommand>, DeductInventoryCommandValidator>();
         services.AddSingleton<IValidator<LoginCommand>, LoginCommandValidator>();
         services.AddSingleton<IValidator<RegisterCommand>, RegisterCommandValidator>();
+        services.AddSingleton<IValidator<CreateHoldCommand>, CreateHoldCommandValidator>();
+        services.AddSingleton<IValidator<ConfirmHoldCommand>, ConfirmHoldCommandValidator>();
+        services.AddSingleton<IValidator<ReleaseHoldCommand>, ReleaseHoldCommandValidator>();
 
         // Đăng ký MetricService (xuat metric P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining, FR-06, NFR-07)
         services.AddScoped<IMetricService, MetricService>();
