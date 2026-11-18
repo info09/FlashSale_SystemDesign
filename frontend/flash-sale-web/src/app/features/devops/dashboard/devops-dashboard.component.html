@@ -1,0 +1,197 @@
+<section class="devops-page">
+  <div class="page-header">
+    <div>
+      <span class="eyebrow">DevOps • Quan sát hệ thống</span>
+      <h1>FlashSale Dashboard</h1>
+      <p class="subtitle">Theo dõi HealthCheck, Metric và trạng thái DeadLetterQueue/Outbox cho ApiGateway và AsyncWorker.</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn ghost" [href]="grafanaUrl" target="_blank" rel="noopener noreferrer">Mở Grafana</a>
+      <button class="btn primary" type="button" (click)="refresh()" [disabled]="loading()">
+        {{ loading() ? 'Đang tải...' : 'Làm mới' }}
+      </button>
+    </div>
+  </div>
+
+  @if (lastUpdated()) {
+    <p class="meta-line">Cập nhật lần cuối: {{ lastUpdated() | date: 'HH:mm:ss dd/MM/yyyy' }}</p>
+  }
+
+  @if (errorMessage()) {
+    <div class="alert error page-alert" role="alert">
+      <span class="alert-icon">!</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (loading() && !health() && !metrics().length) {
+    <div class="skeleton-grid" aria-live="polite">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+  } @else {
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Trạng thái nhanh</h2>
+        <span class="panel-hint">HealthCheck & chỉ số tức thời</span>
+      </div>
+
+      <div class="status-grid">
+        <article class="status-card" [class.ok]="overallHealthy()" [class.bad]="health() && !overallHealthy()">
+          <div class="status-label">Tổng trạng thái</div>
+          <div class="status-value">{{ health()?.status || 'Không có dữ liệu' }}</div>
+          <div class="status-note">ApiGateway / dịch vụ phụ thuộc</div>
+        </article>
+
+        @for (entry of healthEntries(); track trackByName($index, entry)) {
+          <article class="status-card" [class.ok]="entry.isHealthy" [class.bad]="!entry.isHealthy">
+            <div class="status-label">HealthCheck: {{ entry.name }}</div>
+            <div class="status-value">{{ entry.status }}</div>
+            <div class="status-note">{{ entry.isHealthy ? 'Hoạt động bình thường' : 'Cần kiểm tra dịch vụ' }}</div>
+          </article>
+        } @empty {
+          <article class="status-card muted">
+            <div class="status-label">HealthCheck chi tiết</div>
+            <div class="status-value">Không có dữ liệu.</div>
+            <div class="status-note">Kiểm tra endpoint /api/v1/health.</div>
+          </article>
+        }
+
+        <article class="status-card" [class.warn]="(dlqSize() ?? 0) > 0">
+          <div class="status-label">DlqSize</div>
+          <div class="status-value">{{ formatValue(dlqSize(), '') }}</div>
+          <div class="status-note">{{ (dlqSize() ?? 0) > 0 ? 'Có message lỗi cần xử lý trong DeadLetterQueue.' : 'Không ghi nhận message lỗi.' }}</div>
+        </article>
+
+        <article class="status-card">
+          <div class="status-label">QueueDepth</div>
+          <div class="status-value">{{ formatValue(queueDepth(), '') }}</div>
+          <div class="status-note">Độ sâu hàng đợi xử lý</div>
+        </article>
+
+        <article class="status-card">
+          <div class="status-label">InventoryRemaining</div>
+          <div class="status-value">{{ formatValue(inventoryRemaining(), '') }}</div>
+          <div class="status-note">Tồn kho còn lại</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Metric (FR-06, NFR-07)</h2>
+        <span class="panel-hint">Nguồn: Prometheus scrape `/api/v1/metrics`</span>
+      </div>
+
+      @if (!metrics().length) {
+        <div class="empty-state">Không có dữ liệu metric. Kiểm tra Prometheus/endpoint metrics.</div>
+      } @else {
+        <div class="metrics-grid">
+          @for (metric of metrics(); track trackByKey($index, metric)) {
+            <article class="metric-card">
+              <div class="metric-top">
+                <h3>{{ metric.label }}</h3>
+                @if (metric.unit) { <span class="unit-badge">{{ metric.unit }}</span> }
+              </div>
+              @if (!metric.samples.length) {
+                <p class="metric-empty">Không có dữ liệu.</p>
+              } @else {
+                <div class="metric-main">{{ formatMetric(metric) }}</div>
+                @if (metric.samples.length > 1) {
+                  <ul class="sample-list">
+                    @for (sample of metric.samples; track $index) {
+                      <li>
+                        <span class="sample-job">{{ sample.labels['job'] || sample.labels['instance'] || ('sample ' + ($index + 1)) }}</span>
+                        <strong>{{ formatValue(sample.value, metric.unit) }}</strong>
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <div class="two-col">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Grafana Dashboard</h2>
+          <span class="panel-hint">FlashSale Overview</span>
+        </div>
+        <p class="panel-text">Dashboard hiển thị P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining theo job (refresh 10s). Nếu iframe bị chặn bởi cấu hình Grafana, dùng nút "Mở Grafana".</p>
+        <div class="grafana-frame-wrap">
+          <iframe [src]="grafanaEmbedUrl" title="Grafana FlashSale Overview" loading="lazy"></iframe>
+        </div>
+        <div class="inline-actions">
+          <a class="btn secondary" [href]="grafanaUrl" target="_blank" rel="noopener noreferrer">Mở trong tab mới</a>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>DeadLetterQueue & Outbox</h2>
+          <span class="panel-hint">Quản lý lỗi xử lý (FR-05, NFR-07)</span>
+        </div>
+
+        <div class="dlq-summary" [class.warn]="(dlqSize() ?? 0) > 0">
+          <div>
+            <div class="dlq-title">DeadLetterQueue</div>
+            <div class="dlq-desc">
+              @if ((dlqSize() ?? 0) > 0) {
+                Có message lỗi cần xử lý trong DeadLetterQueue (DlqSize: {{ formatValue(dlqSize(), '') }}).
+              } @else {
+                Không có message lỗi nào trong DeadLetterQueue.
+              }
+            </div>
+          </div>
+          <span class="badge" [class.badge-warn]="(dlqSize() ?? 0) > 0" [class.badge-ok]="(dlqSize() ?? 0) <= 0">
+            {{ (dlqSize() ?? 0) > 0 ? 'Cần xử lý' : 'Ổn định' }}
+          </span>
+        </div>
+
+        <div class="info-box">
+          <strong>Xem/Retry message DLQ:</strong>
+          <p>Chưa có API liệt kê và retry từng message DeadLetterQueue trong hệ thống hiện tại. Có thể kiểm tra/Retry/Purge trực tiếp qua RabbitMQ Management UI hoặc theo quy trình ops.</p>
+          <div class="inline-actions">
+            <a class="btn secondary" href="http://localhost:15672" target="_blank" rel="noopener noreferrer">Mở RabbitMQ Management</a>
+            <a class="btn ghost" [href]="grafanaUrl" target="_blank" rel="noopener noreferrer">Xem trên Grafana</a>
+          </div>
+        </div>
+
+        <div class="purge-box">
+          <div class="purge-head">
+            <div>
+              <div class="dlq-title">Purge Outbox đã xử lý</div>
+              <p>Gọi <code>POST /api/v1/outbox/purge</code> để xóa bản ghi Outbox đã xử lý (Published/Failed) và quá hạn giữ. Bản ghi Pending không bị xóa.</p>
+            </div>
+          </div>
+
+          @if (purgeResult()) {
+            <div class="alert" [class.success]="purgeResult()!.type === 'success'" [class.error]="purgeResult()!.type === 'error'" role="alert">
+              <span class="alert-icon">{{ purgeResult()!.type === 'success' ? '✓' : '!' }}</span>
+              <span>{{ purgeResult()!.message }}</span>
+            </div>
+          }
+
+          @if (purgeConfirming()) {
+            <div class="confirm-box" role="dialog" aria-label="Xác nhận purge Outbox">
+              <p><strong>Xác nhận purge:</strong> Hành động này sẽ xóa bản ghi Outbox đã xử lý và quá hạn. Không thể hoàn tác.</p>
+              <div class="inline-actions">
+                <button class="btn danger" type="button" (click)="confirmPurge()" [disabled]="purgeLoading()">Xác nhận Purge</button>
+                <button class="btn secondary" type="button" (click)="cancelPurge()" [disabled]="purgeLoading()">Hủy</button>
+              </div>
+            </div>
+          } @else {
+            <button class="btn secondary" type="button" (click)="requestPurge()" [disabled]="purgeLoading()">
+              {{ purgeLoading() ? 'Đang purge...' : 'Purge Outbox' }}
+            </button>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</section>

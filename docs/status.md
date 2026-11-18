@@ -121,7 +121,7 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ### Phase 7: UI / Frontend (theo docs/ux.md — ngoài phạm vi MVP)
 
 - [x] Story 7.1 (UX): Thiết kế màn hình Gọi API mua hàng (FlashSaleShopper) theo docs/ux.md phần Information Architecture — them `docs/ux-flashsale-buy-screen.md` (flow FR-01/FR-02/FR-03, wireframe desktop/mobile, trang thai/loading/error/success 202, copy theo glossary, mapping `POST /api/v1/flash-sale/buy`, component/tokens/accessibility); trien khai UI Angular tai `frontend/flash-sale-web` (login lay Bearer token, guard/interceptor, man hinh `/buy` goi `/api/v1/flash-sale/buy`, xu ly trang thai 202/400/401/429/5xx, proxy `/api`).
-- [] Story 7.2 (UX): Thiết kế màn hình Grafana Dashboard cho DevOps theo docs/ux.md
+- [x] Story 7.2 (UX): Thiết kế màn hình Grafana Dashboard cho DevOps theo docs/ux.md — them `docs/ux-grafana-dashboard-devops-screen.md` (IA Luong B, layout/panel Metric + HealthCheck + DLQ, flow xem metric/health/quan ly DeadLetterQueue retry-purge, trang thai loading/empty/error/success, mapping voi `FlashSale Overview` hien co va huong mo rong); trien khai UI Angular tai `frontend/flash-sale-web` (route `/ops`, `DevOpsDashboardComponent`, nav Buy/DevOps, service goi `/api/v1/health` va parse `/api/v1/metrics`, hien thi trang thai nhanh 5 metric, embed/link Grafana `FlashSale Overview`, khu vuc DeadLetterQueue/Outbox voi xac nhan purge qua `POST /api/v1/outbox/purge`, xu ly loading/error/empty/401).
 - [] Story 7.3 (UX): Triển khai component Form, Table, Modal, Toast, Empty state, Loading skeleton theo docs/ux.md phần 5
 - [] Story 7.4 (UX): Áp dụng design tokens (màu, typography, spacing, breakpoint) theo docs/ux.md phần 4 ([ĐỀ XUẤT - CẦN DUYỆT])
 - [] Story 7.5 (UX): Đảm bảo Accessibility tối thiểu theo docs/ux.md phần 6
@@ -132,8 +132,8 @@ Mỗi story là 1 đơn vị việc đủ nhỏ để hoàn thành trong **1 pro
 ## 3. Trạng thái hiện tại
 
 - **Phase đang làm:** Phase 7 - UI / Frontend (theo docs/ux.md, ngoài phạm vi MVP)
-- **Story đang làm:** Hoan thanh Story 7.1 (thiet ke + trien khai Angular man hinh FlashSaleShopper); chua thuc hien 7.2–7.8
-- **Lần cập nhật gần nhất:** Trien khai Story 7.1 bang Angular (khong commit): tao `frontend/flash-sale-web` (Angular CLI, standalone, routing, proxy `/api`), core auth (login service/interceptor/guard), trang `/login` va `/buy` theo spec/copy/trang thai 202/400/401/429/5xx; cap nhat `docs/status.md`. Chua chay build verification trong phien nay.
+- **Story đang làm:** Hoan thanh Story 7.2 (thiet ke + trien khai Angular DevOps Dashboard); chua thuc hien 7.3–7.8
+- **Lần cập nhật gần nhất:** Trien khai Story 7.2 theo huong UI/FrontEnd Angular (khong commit): them route `/ops` va `DevOpsDashboardComponent` trong `frontend/flash-sale-web` hien thi HealthCheck (`/api/v1/health`), 5 Metric tu `/api/v1/metrics` (parse Prometheus text), link/embed Grafana `FlashSale Overview`, khu vuc DeadLetterQueue/Outbox (canh bao `DlqSize`, xac nhan purge `POST /api/v1/outbox/purge`, huong dan xem/retry DLQ qua RabbitMQ/Grafana), cap nhat nav va `docs/status.md`. Chua chay build/test UI trong phien nay.
 - **Sửa lỗi JWT:** RateLimitMiddleware IsAuthenticated=false do ValidIssuer/ValidAudience=null (builder.Configuration không có AddInMemoryCollection từ WebApplicationFactory) → thêm fallback ?? "FlashSale.Api" / ?? "FlashSale.Client"; build 0 error
 - **Sửa lỗi RedisScriptExecutor:** Lua script trả về mảng (ví dụ: [allowed, remaining, resetAfter]) làm Result.ToString() trả về "N element(s)" thay vì giá trị thực → dùng reflection để đọc trường _result bên trong RedisResult và chuyển đổi mảng thành chuỗi phân tách bằng dấu phẩy; đồng thời thay đổi rate_limit_token_bucket.lua trả về chuỗi delimiter thay vì mảng Lua; build 0 error
 hoàn thành Story 3.1 (Domain): Tạo entity Order, interface IOrderRepository trong FlashSale.Domain

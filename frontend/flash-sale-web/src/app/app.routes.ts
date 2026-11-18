@@ -13,6 +13,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/flash-sale/buy/buy.component').then((m) => m.BuyComponent)
   },
+  {
+    path: 'ops',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/devops/dashboard/devops-dashboard.component').then(
+        (m) => m.DevOpsDashboardComponent
+      )
+  },
   { path: '', pathMatch: 'full', redirectTo: 'buy' },
   { path: '**', redirectTo: 'buy' }
 ];
