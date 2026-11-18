@@ -1,7 +1,6 @@
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Entities;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace FlashSale.Application.Services;
 
@@ -68,8 +67,9 @@ public class MetricService : IMetricService
     /// <summary>
     /// Xuat tat ca metric theo dang Prometheus text format de Prometheus scrape.
     /// </summary>
-    public Task<string> ExportPrometheusFormatAsync(CancellationToken cancellationToken = default)
+    public async Task<string> ExportPrometheusFormatAsync(CancellationToken cancellationToken = default)
     {
+        await UpdateInfrastructureMetricsAsync(cancellationToken);
         var lines = new List<string>();
 
         foreach (var metric in _metrics.Values.OrderBy(m => m.Name))
@@ -80,7 +80,7 @@ public class MetricService : IMetricService
             lines.Add(string.Empty);
         }
 
-        return Task.FromResult(string.Join(Environment.NewLine, lines));
+        return string.Join(Environment.NewLine, lines);
     }
 
     private async Task UpdateInfrastructureMetricsAsync(CancellationToken cancellationToken)

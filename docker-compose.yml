@@ -47,6 +47,12 @@ services:
       dockerfile: src/FlashSale.Worker/Dockerfile
     container_name: flashsale-worker
     depends_on:
+      flashsale-redis-1:
+        condition: service_healthy
+      flashsale-redis-2:
+        condition: service_healthy
+      flashsale-redis-3:
+        condition: service_healthy
       flashsale-rabbitmq:
         condition: service_healthy
       flashsale-postgres-primary:
@@ -54,6 +60,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - POSTGRESQL_PRIMARY_CONNECTION_STRING=${POSTGRESQL_PRIMARY_CONNECTION_STRING}
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING:-flashsale-redis-1:6379,flashsale-redis-2:6380,flashsale-redis-3:6381}
       - RABBITMQ_CONNECTION_STRING=${RABBITMQ_CONNECTION_STRING}
       - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME}
       - RABBITMQ_EXCHANGE_NAME=${RABBITMQ_EXCHANGE_NAME}
