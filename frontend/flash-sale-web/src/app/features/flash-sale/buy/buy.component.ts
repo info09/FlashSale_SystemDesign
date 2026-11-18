@@ -55,7 +55,7 @@ export class BuyComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.formError.set('Vui lòng kiểm tra thông tin mua hàng.');
+      this.formError.set('Vui lòng kiểm tra lại thông tin mua hàng.');
       return;
     }
 
@@ -119,7 +119,7 @@ export class BuyComponent implements OnInit {
       }
       this.result.set({
         type: 'error',
-        message: message || 'Yêu cầu không hợp lệ. Vui lòng kiểm tra ProductId và Quantity.'
+        message: message || 'Yêu cầu không hợp lệ. Vui lòng kiểm tra mã sản phẩm và số lượng.'
       });
       return;
     }

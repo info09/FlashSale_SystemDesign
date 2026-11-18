@@ -134,11 +134,11 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
           if (health.error.status === 503 && health.error.error) {
             this.health.set(health.error.error as HealthResponse);
           } else if (!health.data) {
-            errors.push('Không thể tải HealthCheck (ApiGateway/Redis/RabbitMQ/PostgreSQLPrimary).');
+            errors.push('Không thể tải HealthCheck. Vui lòng kiểm tra kết nối ApiGateway, Redis, RabbitMQ và PostgreSQLPrimary.');
           }
         }
         if (metrics.error && (!metrics.data || !metrics.data.length)) {
-          errors.push('Không thể tải Metric từ /api/v1/metrics.');
+          errors.push('Không thể tải Metric. Vui lòng kiểm tra endpoint /api/v1/metrics hoặc Prometheus.');
         }
 
         this.errorMessage.set(errors.length ? errors.join(' ') : null);
@@ -174,7 +174,7 @@ export class DevOpsDashboardComponent implements OnInit, OnDestroy {
             this.handleUnauthorized();
             return;
           }
-          const msg = err?.error?.message || 'Lỗi hệ thống khi purge bảng Outbox.';
+          const msg = err?.error?.message || 'Không thể purge Outbox. Vui lòng thử lại sau.';
           this.purgeResult.set({ type: 'error', message: msg });
           this.toastService.error(msg);
         }

@@ -1,9 +1,9 @@
 <section class="card buy-card">
   <div class="card-header">
     <div class="title-block">
-      <span class="eyebrow">FlashSale Checkout</span>
-      <h1>Gọi API mua hàng</h1>
-      <p class="subtitle">Gửi yêu cầu mua Product trong FlashSale qua ApiGateway và nhận phản hồi tức thì.</p>
+      <span class="eyebrow">FlashSale</span>
+      <h1>Mua hàng</h1>
+      <p class="subtitle">Gửi yêu cầu mua hàng nhanh. Bạn sẽ nhận phản hồi ngay sau khi hệ thống tiếp nhận yêu cầu.</p>
     </div>
     <button type="button" class="btn ghost" (click)="logout()">Đăng xuất</button>
   </div>
@@ -16,22 +16,22 @@
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form-grid">
     <ui-form-field
-      label="ProductId"
+      label="Mã sản phẩm (ProductId)"
       [required]="true"
       forId="buy-product-id"
       [loading]="loading()"
-      [error]="form.controls.productId.touched && form.controls.productId.invalid ? 'Vui lòng nhập ProductId.' : null">
+      [error]="form.controls.productId.touched && form.controls.productId.invalid ? 'Vui lòng nhập mã sản phẩm.' : null">
       <input id="buy-product-id" type="text" formControlName="productId" placeholder="vd: product-test" [disabled]="loading()" />
     </ui-form-field>
 
     <ui-form-field
-      label="Quantity"
+      label="Số lượng (Quantity)"
       [required]="true"
       forId="buy-quantity"
       [loading]="loading()"
       [error]="form.controls.quantity.touched && form.controls.quantity.hasError('required')
-        ? 'Vui lòng nhập Quantity.'
-        : (form.controls.quantity.touched && form.controls.quantity.hasError('min') ? 'Quantity phải lớn hơn 0.' : null)">
+        ? 'Vui lòng nhập số lượng.'
+        : (form.controls.quantity.touched && form.controls.quantity.hasError('min') ? 'Số lượng phải lớn hơn 0.' : null)">
       <input id="buy-quantity" type="number" min="1" formControlName="quantity" [disabled]="loading()" />
     </ui-form-field>
 

@@ -58,20 +58,20 @@
           <article class="status-card" [class.ok]="entry.isHealthy" [class.bad]="!entry.isHealthy">
             <div class="status-label">HealthCheck: {{ entry.name }}</div>
             <div class="status-value">{{ entry.status }}</div>
-            <div class="status-note">{{ entry.isHealthy ? 'Hoạt động bình thường' : 'Cần kiểm tra dịch vụ' }}</div>
+            <div class="status-note">{{ entry.isHealthy ? 'Hoạt động bình thường.' : 'Dịch vụ bất thường. Vui lòng kiểm tra HealthCheck.' }}</div>
           </article>
         } @empty {
           <article class="status-card muted">
             <div class="status-label">HealthCheck chi tiết</div>
             <div class="status-value">Không có dữ liệu.</div>
-            <div class="status-note">Kiểm tra endpoint /api/v1/health.</div>
+            <div class="status-note">Không thể lấy dữ liệu. Vui lòng kiểm tra endpoint /api/v1/health.</div>
           </article>
         }
 
         <article class="status-card" [class.warn]="(dlqSize() ?? 0) > 0">
           <div class="status-label">DlqSize</div>
           <div class="status-value">{{ formatValue(dlqSize(), '') }}</div>
-          <div class="status-note">{{ (dlqSize() ?? 0) > 0 ? 'Có message lỗi cần xử lý trong DeadLetterQueue.' : 'Không ghi nhận message lỗi.' }}</div>
+          <div class="status-note">{{ (dlqSize() ?? 0) > 0 ? 'Có message lỗi cần xử lý trong DeadLetterQueue.' : 'Không có message lỗi nào trong DeadLetterQueue.' }}</div>
         </article>
 
         <article class="status-card">
@@ -98,7 +98,7 @@
         <ui-empty-state
           icon="📊"
           title="Không có dữ liệu."
-          description="Không có dữ liệu metric. Kiểm tra Prometheus/endpoint metrics.">
+          description="Không thể hiển thị Metric. Vui lòng kiểm tra Prometheus hoặc endpoint /api/v1/metrics.">
         </ui-empty-state>
       } @else {
         <ui-table
@@ -106,7 +106,7 @@
           [rows]="metricRows()"
           trackByKey="id"
           emptyTitle="Không có dữ liệu."
-          emptyDescription="Không có metric để hiển thị.">
+          emptyDescription="Không có dữ liệu Metric để hiển thị. Vui lòng kiểm tra nguồn thu thập Metric.">
         </ui-table>
 
         <div class="metrics-grid">
@@ -143,7 +143,7 @@
           <h2>Grafana Dashboard</h2>
           <span class="panel-hint">FlashSale Overview</span>
         </div>
-        <p class="panel-text">Dashboard hiển thị P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining theo job (refresh 10s). Nếu iframe bị chặn bởi cấu hình Grafana, dùng nút "Mở Grafana".</p>
+        <p class="panel-text">Dashboard hiển thị Metric: P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining theo job (làm mới 10s). Nếu iframe bị chặn, bạn có thể mở Grafana trong tab mới.</p>
         <div class="grafana-frame-wrap">
           <iframe [src]="grafanaEmbedUrl" title="Grafana FlashSale Overview" loading="lazy"></iframe>
         </div>
@@ -175,8 +175,8 @@
         </div>
 
         <div class="info-box">
-          <strong>Xem/Retry message DLQ:</strong>
-          <p>Chưa có API liệt kê và retry từng message DeadLetterQueue trong hệ thống hiện tại. Có thể kiểm tra/Retry/Purge trực tiếp qua RabbitMQ Management UI hoặc theo quy trình ops.</p>
+          <strong>Xem/Retry message trong DeadLetterQueue:</strong>
+          <p>Hệ thống hiện chưa có API để xem danh sách và Retry từng message trong DeadLetterQueue. Bạn có thể kiểm tra và xử lý qua RabbitMQ Management UI hoặc quy trình vận hành.</p>
           <div class="inline-actions">
             <a class="btn secondary" href="http://localhost:15672" target="_blank" rel="noopener noreferrer">Mở RabbitMQ Management</a>
             <a class="btn ghost" [href]="grafanaUrl" target="_blank" rel="noopener noreferrer">Xem trên Grafana</a>

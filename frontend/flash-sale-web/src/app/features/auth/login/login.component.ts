@@ -31,7 +31,7 @@ export class LoginComponent {
     this.errorMessage.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Vui lòng nhập đầy đủ thông tin đăng nhập.');
+      this.errorMessage.set('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
       return;
     }
 
@@ -53,10 +53,10 @@ export class LoginComponent {
   private resolveErrorMessage(err: any): string {
     const status = err?.status;
     if (status === 401 || status === 400) {
-      return err?.error?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
+      return err?.error?.message || 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng kiểm tra và thử lại.';
     }
     if (status === 0) {
-      return 'Không thể kết nối máy chủ. Vui lòng thử lại sau.';
+      return 'Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối và thử lại sau.';
     }
     return err?.error?.message || err?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.';
   }
