@@ -89,6 +89,9 @@ public static class DependencyInjection
         // Đăng ký ReconciliationRepository (doi chieu du lieu, NFR-06)
         services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
 
+        // Đăng ký InformationCustomerRepository (luu thong tin khach hang khi confirm hold)
+        services.AddScoped<IInformationCustomerRepository, InformationCustomerRepository>();
+
         // Đăng ký IDatabaseConnectionChecker (kiem tra ket noi PostgreSQLPrimary cho HealthCheck, NFR-07)
         services.AddScoped<IDatabaseConnectionChecker, PostgreSqlDatabaseConnectionChecker>();
 
