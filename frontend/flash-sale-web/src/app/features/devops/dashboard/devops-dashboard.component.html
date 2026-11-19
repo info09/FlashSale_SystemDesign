@@ -83,7 +83,7 @@
         <article class="status-card">
           <div class="status-label">InventoryRemaining</div>
           <div class="status-value">{{ formatValue(inventoryRemaining(), '') }}</div>
-          <div class="status-note">Tồn kho còn lại</div>
+          <div class="status-note">Tồn kho khả dụng (sau reserve hold)</div>
         </article>
       </div>
     </section>
@@ -143,7 +143,7 @@
           <h2>Grafana Dashboard</h2>
           <span class="panel-hint">FlashSale Overview</span>
         </div>
-        <p class="panel-text">Dashboard hiển thị Metric: P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining theo job (làm mới 10s). Nếu iframe bị chặn, bạn có thể mở Grafana trong tab mới.</p>
+        <p class="panel-text">Dashboard hiển thị Metric: P99Latency, ErrorRate, QueueDepth, DlqSize, InventoryRemaining (tồn kho khả dụng, sau reserve hold) theo job (làm mới 10s). Nếu iframe bị chặn, bạn có thể mở Grafana trong tab mới.</p>
         <div class="grafana-frame-wrap">
           <iframe [src]="grafanaEmbedUrl" title="Grafana FlashSale Overview" loading="lazy"></iframe>
         </div>

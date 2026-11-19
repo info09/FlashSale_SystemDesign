@@ -29,7 +29,7 @@ public class MetricEndpointService : IHostedService
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseKestrel();
-        //builder.WebHost.UseUrls("http://+:8080");
+        builder.WebHost.UseUrls("http://+:8080");
 
         // Dung chung IServiceProvider tu Worker host de lay IMetricService (da dang ky qua AddApplication)
         builder.Services.AddSingleton(_serviceProvider);

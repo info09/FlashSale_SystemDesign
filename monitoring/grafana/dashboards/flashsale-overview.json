@@ -289,6 +289,7 @@
         }
       ],
       "title": "InventoryRemaining",
+      "description": "Tồn kho khả dụng để giữ/chốt (available sau reserve hold; tăng lại khi hết hạn/hủy/nhả slot).",
       "type": "timeseries"
     }
   ],

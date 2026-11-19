@@ -6,6 +6,12 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { BuyComponent } from './buy.component';
 import { authInterceptor } from '../../../core/auth/auth.interceptor';
 
+async function flushMicrotasks(fixture: { detectChanges: () => void }): Promise<void> {
+  fixture.detectChanges();
+  await Promise.resolve();
+  fixture.detectChanges();
+}
+
 describe('Hold flow (UI + API integration)', () => {
   let httpMock: HttpTestingController;
 
@@ -60,9 +66,7 @@ describe('Hold flow (UI + API integration)', () => {
       expiresAt: '2026-11-19T10:01:00Z',
       ttlSeconds: 60,
     });
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('held');
     expect(component.activeHoldId()).toBe('hold-123');
@@ -91,9 +95,7 @@ describe('Hold flow (UI + API integration)', () => {
       },
       { status: 202, statusText: 'Accepted' },
     );
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('success');
     expect(component.result()?.type).toBe('success');
@@ -112,8 +114,7 @@ describe('Hold flow (UI + API integration)', () => {
 
     const req = httpMock.expectOne('/api/v1/flash-sale/hold');
     req.flush({ code: 'INSUFFICIENT_INVENTORY', message: 'Hết hàng' }, { status: 400, statusText: 'Bad Request' });
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('out_of_stock');
     expect(component.result()?.type).toBe('error');
@@ -136,8 +137,7 @@ describe('Hold flow (UI + API integration)', () => {
       expiresAt: '2026-11-19T10:00:02Z',
       ttlSeconds: 2,
     });
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     vi.advanceTimersByTime(2000);
     fixture.detectChanges();
@@ -162,7 +162,7 @@ describe('Hold flow (UI + API integration)', () => {
       expiresAt: '2026-11-19T10:01:00Z',
       ttlSeconds: 60,
     });
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.customerForm.setValue({ name: 'A', phoneNumber: '0900', address: 'HN' });
     component.confirmHold();
@@ -170,8 +170,7 @@ describe('Hold flow (UI + API integration)', () => {
 
     const confirmReq = httpMock.expectOne('/api/v1/flash-sale/hold/hold-410/confirm');
     confirmReq.flush({ code: 'HOLD_EXPIRED', message: 'Hết hạn' }, { status: 410, statusText: 'Gone' });
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('expired');
     expect(component.result()?.message).toContain('Giữ chỗ đã hết hạn');
@@ -189,8 +188,7 @@ describe('Hold flow (UI + API integration)', () => {
 
     const req = httpMock.expectOne('/api/v1/flash-sale/hold');
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(localStorage.getItem('flashsale_access_token')).toBeNull();
     expect(navSpy).toHaveBeenCalled();

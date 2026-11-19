@@ -74,13 +74,27 @@ public class MetricService : IMetricService
 
         foreach (var metric in _metrics.Values.OrderBy(m => m.Name))
         {
-            lines.Add($"# HELP flash_sale_{metric.Name.ToLowerInvariant()} {metric.Name} metric");
+            var help = GetMetricHelp(metric.Name);
+            lines.Add($"# HELP flash_sale_{metric.Name.ToLowerInvariant()} {help}");
             lines.Add($"# TYPE flash_sale_{metric.Name.ToLowerInvariant()} gauge");
             lines.Add($"flash_sale_{metric.Name.ToLowerInvariant()} {metric.Value}");
             lines.Add(string.Empty);
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string GetMetricHelp(string metricName)
+    {
+        return metricName switch
+        {
+            "InventoryRemaining" => "InventoryRemaining - available inventory remaining for hold/checkout (after hold reservation).",
+            "P99Latency" => "P99Latency - p99 request latency in milliseconds.",
+            "ErrorRate" => "ErrorRate - request error rate in percent.",
+            "QueueDepth" => "QueueDepth - number of messages waiting in order pipeline queue.",
+            "DlqSize" => "DlqSize - number of messages in dead letter queue.",
+            _ => $"{metricName} metric"
+        };
     }
 
     private async Task UpdateInfrastructureMetricsAsync(CancellationToken cancellationToken)

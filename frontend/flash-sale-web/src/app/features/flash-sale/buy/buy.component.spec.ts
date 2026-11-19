@@ -6,6 +6,12 @@ import { BuyComponent } from './buy.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { FlashSaleService } from './flash-sale.service';
 
+async function flushMicrotasks(fixture: { detectChanges: () => void }): Promise<void> {
+  fixture.detectChanges();
+  await Promise.resolve();
+  fixture.detectChanges();
+}
+
 describe('BuyComponent (Hold flow)', () => {
   let flashSaleServiceMock: {
     createHold: ReturnType<typeof vi.fn>;
@@ -49,8 +55,7 @@ describe('BuyComponent (Hold flow)', () => {
     const fixture = TestBed.createComponent(BuyComponent);
     fixture.componentInstance.form.setValue({ productId: '', quantity: 0 } as any);
     fixture.componentInstance.createHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(fixture.componentInstance.formError()).toContain('Vui lòng kiểm tra');
     expect(flashSaleServiceMock.createHold).not.toHaveBeenCalled();
@@ -68,8 +73,7 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('held');
     expect(component.activeHoldId()).toBe('hold-1');
@@ -91,8 +95,7 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('out_of_stock');
     expect(component.result()?.type).toBe('error');
@@ -106,8 +109,7 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.result()?.type).toBe('warning');
     expect(component.result()?.message).toContain('Bạn đã gửi quá nhiều yêu cầu');
@@ -120,8 +122,7 @@ describe('BuyComponent (Hold flow)', () => {
     const navSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.componentInstance.form.setValue({ productId: 'p1', quantity: 1 });
     fixture.componentInstance.createHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(authServiceMock.logout).toHaveBeenCalled();
     expect(navSpy).toHaveBeenCalled();
@@ -142,12 +143,11 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.customerForm.setValue({ name: 'Nguyen Van A', phoneNumber: '0900000000', address: 'Ha Noi' });
     component.confirmHold();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(flashSaleServiceMock.confirmHold).toHaveBeenCalledWith('hold-1', {
       name: 'Nguyen Van A',
@@ -174,7 +174,7 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.customerForm.setValue({ name: '', phoneNumber: '', address: '' });
     component.confirmHold();
@@ -198,7 +198,7 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     vi.advanceTimersByTime(2000);
     fixture.detectChanges();
@@ -224,11 +224,11 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.customerForm.setValue({ name: 'A', phoneNumber: '0900', address: 'HN' });
     component.confirmHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.holdState()).toBe('expired');
     expect(component.result()?.message).toContain('Giữ chỗ đã hết hạn');
@@ -251,11 +251,11 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.customerForm.setValue({ name: 'A', phoneNumber: '0900', address: 'HN' });
     component.confirmHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(component.result()?.type).toBe('warning');
     expect(component.result()?.message).toContain('Giữ chỗ đã được xác nhận');
@@ -276,10 +276,10 @@ describe('BuyComponent (Hold flow)', () => {
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'p1', quantity: 1 });
     component.createHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     component.releaseHold();
-    await fixture.whenStable();
+    await flushMicrotasks(fixture);
 
     expect(flashSaleServiceMock.releaseHold).toHaveBeenCalledWith('hold-1');
     expect(component.holdState()).toBe('idle');

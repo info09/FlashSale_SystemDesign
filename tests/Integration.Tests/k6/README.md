@@ -1,9 +1,10 @@
 # k6 Load Test Scripts
 
-Thư mục chứa script k6 cho Phase 6 (FR-07, NFR-01, NFR-02, NFR-03).
+Thư mục chứa script k6 cho Phase 6 (FR-07, NFR-01, NFR-02, NFR-03) và kịch bản Phase 8 (Hold/Reservation).
 
 ## Script hiện có
-- `flashsale-buy.js` — Story 6.1: giả lập **8.000 VirtualUser đồng thời** gọi `POST /api/v1/flash-sale/buy`.
+- `flashsale-buy.js` — Story 6.1: giả lập **8.000 VirtualUser đồng thời** gọi `POST /api/v1/flash-sale/buy` (luồng hiện tại, chạy song song).
+- `flashsale-hold.js` — Story 8.8 (theo phạm vi khả thi): kịch bản Hold/Reservation (`POST /api/v1/flash-sale/hold`, `POST /api/v1/flash-sale/hold/{holdId}/confirm`) cho **còn hàng/giữ chỗ/confirm**, **hết hàng** (`INSUFFICIENT_INVENTORY`) và tạo điều kiện **hết hạn nhả slot** (`MODE=hold_only`, cần `FlashSale.WorkerUnHold` chạy để verify nhả slot).
 
 ## Chuẩn bị
 - API/Worker và hạ tầng (PostgreSQL, Redis, RabbitMQ) đang chạy và đã cấu hình dữ liệu cần thiết (user/token, `PRODUCT_ID`, tồn kho/Inventory trong Redis).
@@ -76,6 +77,32 @@ docker compose --profile k6 run --rm \
   flashsale-k6 run /scripts/flashsale-buy.js
 ```
 
+## Ví dụ Story 8.8 — Hold + Confirm (còn hàng/giữ chỗ/confirm)
+```bash
+docker compose --profile k6 run --rm \
+  -e BASE_URL=http://flashsale-api:8080 -e ACCESS_TOKEN=<JWT> -e PRODUCT_ID=<id> \
+  -e MODE=confirm -e VUS=10 -e DURATION=30s -e SLEEP_SECONDS=0.2 -e THINK_TIME_SECONDS=0.2 \
+  flashsale-k6 run /scripts/flashsale-hold.js
+```
+
+## Ví dụ Story 8.8 — Hết hàng (INSUFFICIENT_INVENTORY)
+Chạy `MODE=confirm` hoặc `MODE=out_of_stock_probe` khi inventory không đủ/đã hết (hoặc sau khi tiêu thụ hết). Hold trả 400 `INSUFFICIENT_INVENTORY` được coi là response hợp lệ của kịch bản hết hàng.
+
+## Ví dụ Story 8.8 — Hết hạn nhả slot
+```bash
+docker compose --profile k6 run --rm \
+  -e BASE_URL=http://flashsale-api:8080 -e ACCESS_TOKEN=<JWT> -e PRODUCT_ID=<id> \
+  -e MODE=hold_only -e VUS=1 -e DURATION=10s -e SLEEP_SECONDS=1 \
+  flashsale-k6 run /scripts/flashsale-hold.js
+```
+Script tạo hold và không confirm (hold hết hạn sau 60s). **Cần `FlashSale.WorkerUnHold` chạy** và verify ngoài script rằng inventory/slot được trả lại (`InventoryRemaining` tăng/Redis hold keys được dọn) sau ~1–2s kể từ hết hạn.
+
+### Biến môi trường bổ sung (`flashsale-hold.js`)
+- `MODE`: `confirm` (mặc định, hold+confirm) | `hold_only` (không confirm, phục vụ expiry/release) | `out_of_stock_probe`
+- `THINK_TIME_SECONDS`: thời gian chờ giữa hold và confirm (mặc định `0.2`)
+- Các biến chung tương tự `flashsale-buy.js` (`BASE_URL`, `ACCESS_TOKEN`/`K6_USERNAME`/`K6_PASSWORD`, `PRODUCT_ID`, `QUANTITY`, `VUS`, `DURATION`, `SLEEP_SECONDS`, thresholds...)
+
 ## Lưu ý
 - Story 6.1: 8.000 VU đồng thời. Story 6.2–6.4 dùng cùng script với threshold/env phù hợp để kiểm tra NFR-01/NFR-02/NFR-03.
-- `error_rate` (custom) không tính 202/400/401/429 là lỗi; `http_req_failed` của k6 vẫn tính 4xx/5xx. 15.000 RPS và 8.000 VU đòi hỏi hạ tầng/máy chạy k6 đủ mạnh.
+- Story 8.8: kịch bản hold/confirm chạy theo phạm vi khả thi; ràng buộc 1 user/1 active hold có thể gây `HOLD_ALREADY_EXISTS` (409) khi dùng chung token/tải cao — được coi là response hợp lệ.
+- `error_rate` (custom) không tính 202/400/401/429 (và các mã hợp lệ theo kịch bản hold) là lỗi; `http_req_failed` của k6 vẫn tính 4xx/5xx. 15.000 RPS và 8.000 VU đòi hỏi hạ tầng/máy chạy k6 đủ mạnh.

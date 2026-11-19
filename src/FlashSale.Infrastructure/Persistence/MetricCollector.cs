@@ -36,14 +36,14 @@ public class MetricCollector : IMetricCollector
     }
 
     /// <summary>
-    /// Lay so luong ton kho con lai tren Redis (InventoryRemaining).
+    /// Lay so luong ton kho kha dung con lai tren Redis (InventoryRemaining, available sau reserve hold).
     /// </summary>
     public async Task<double> GetInventoryRemainingAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            // Lay tong so luong ton kho tu InventoryRepository (tung product)
-            // Neu khong co product nao, tra ve 0
+            // Lay tong so luong ton kho kha dung tu InventoryRepository (tung product, sau reserve/hold).
+            // Neu khong co product nao, tra ve 0.
             var inventory = await _inventoryRepository.GetInventoryRemainingAsync(cancellationToken);
             return inventory;
         }
