@@ -131,6 +131,7 @@ public class HoldService : IHoldService
                 name,
                 phoneNumber,
                 address,
+                orderStatus = "Created",
                 occurredOn = DateTimeOffset.UtcNow
             });
 

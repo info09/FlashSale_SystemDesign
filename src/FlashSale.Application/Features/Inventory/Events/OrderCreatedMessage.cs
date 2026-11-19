@@ -62,6 +62,7 @@ public record OrderCreatedMessage
                 name,
                 phoneNumber,
                 address,
+                orderStatus = "Created",
                 occurredOn
             }
         };

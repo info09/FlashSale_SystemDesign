@@ -39,6 +39,36 @@ public class ExceptionHandlerMiddleware
                 ex.ClientId, ex.ResetAfterSeconds);
             await WriteErrorResponse(context, StatusCodes.Status429TooManyRequests, "RATE_LIMIT_EXCEEDED", ex.Message);
         }
+        catch (ActiveHoldAlreadyExistsException ex)
+        {
+            _logger.LogWarning(ex, "Active hold already exists for client {ClientId}. ExistingHoldId: {ExistingHoldId}", ex.ClientId, ex.ExistingHoldId);
+            await WriteErrorResponse(context, StatusCodes.Status409Conflict, "HOLD_ALREADY_EXISTS", ex.Message);
+        }
+        catch (HoldExpiredException ex)
+        {
+            _logger.LogWarning(ex, "Hold expired {HoldId}", ex.HoldId);
+            await WriteErrorResponse(context, StatusCodes.Status410Gone, "HOLD_EXPIRED", ex.Message);
+        }
+        catch (HoldNotOwnedException ex)
+        {
+            _logger.LogWarning(ex, "Hold not owned {HoldId} by client {ClientId}", ex.HoldId, ex.ClientId);
+            await WriteErrorResponse(context, StatusCodes.Status403Forbidden, "HOLD_NOT_OWNED", ex.Message);
+        }
+        catch (HoldConsumedException ex)
+        {
+            _logger.LogWarning(ex, "Hold consumed {HoldId}", ex.HoldId);
+            await WriteErrorResponse(context, StatusCodes.Status409Conflict, "HOLD_CONSUMED", ex.Message);
+        }
+        catch (HoldAlreadyConfirmedException ex)
+        {
+            _logger.LogWarning(ex, "Hold already confirmed {HoldId}", ex.HoldId);
+            await WriteErrorResponse(context, StatusCodes.Status409Conflict, "HOLD_ALREADY_CONFIRMED", ex.Message);
+        }
+        catch (HoldInvalidException ex)
+        {
+            _logger.LogWarning(ex, "Hold invalid {HoldId}", ex.HoldId);
+            await WriteErrorResponse(context, StatusCodes.Status409Conflict, "HOLD_INVALID", ex.Message);
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Business error: {Message}", ex.Message);
