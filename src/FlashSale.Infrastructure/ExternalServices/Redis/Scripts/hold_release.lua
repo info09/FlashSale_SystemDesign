@@ -12,8 +12,57 @@ local expiringKey = KEYS[3]
 local holdId = ARGV[1]
 local clientId = ARGV[2] or ''
 local mode = ARGV[3] or 'user'
+local metaKey = 'hold:meta:' .. holdId
 
 if redis.call('EXISTS', holdKey) == 0 then
+    -- fallback: recover from meta if hold hash evicted but inventory not returned
+    if redis.call('EXISTS', metaKey) == 1 then
+        local metaStatus = redis.call('HGET', metaKey, 'status') or ''
+        local owner = redis.call('HGET', metaKey, 'clientId') or ''
+        local quantity = tonumber(redis.call('HGET', metaKey, 'quantity') or '0')
+        local productId = redis.call('HGET', metaKey, 'productId') or ''
+        local inventoryReturned = redis.call('HGET', metaKey, 'inventoryReturned') or '0'
+
+        if mode == 'user' and clientId ~= '' and owner ~= clientId then
+            return 'NOT_OWNED'
+        end
+
+        if metaStatus == 'consumed' then
+            redis.call('ZREM', expiringKey, holdId)
+            if owner ~= '' then
+                local ownerUserKey = 'hold:user:' .. owner
+                local indexedHoldId = redis.call('GET', ownerUserKey)
+                if indexedHoldId == holdId then redis.call('DEL', ownerUserKey) end
+            end
+            return 'CONSUMED'
+        end
+
+        if inventoryReturned ~= '1' and (metaStatus == 'active' or metaStatus == '') then
+            if quantity > 0 and productId ~= '' then
+                redis.call('INCRBY', 'inventory:' .. productId, quantity)
+            end
+            redis.call('HSET', metaKey, 'inventoryReturned', '1')
+            if mode == 'expire' then
+                redis.call('HSET', metaKey, 'status', 'expired')
+            else
+                redis.call('HSET', metaKey, 'status', 'released')
+            end
+        end
+
+        redis.call('ZREM', expiringKey, holdId)
+        if owner ~= '' then
+            local ownerUserKey = 'hold:user:' .. owner
+            local indexedHoldId = redis.call('GET', ownerUserKey)
+            if indexedHoldId == holdId then redis.call('DEL', ownerUserKey) end
+        end
+
+        local finalStatus = redis.call('HGET', metaKey, 'status') or ''
+        if finalStatus == 'expired' then return 'EXPIRED_RELEASED' end
+        if finalStatus == 'released' then return 'RELEASED' end
+        if inventoryReturned == '1' then return 'ALREADY_RELEASED' end
+        return 'RELEASED'
+    end
+
     -- idempotent: if already removed from indexes, treat as released
     redis.call('ZREM', expiringKey, holdId)
     if clientId ~= '' then
@@ -35,6 +84,7 @@ end
 
 if status == 'consumed' then
     redis.call('ZREM', expiringKey, holdId)
+    redis.call('HSET', metaKey, 'status', 'consumed')
     if owner ~= '' then
         local ownerUserKey = 'hold:user:' .. owner
         local indexedHoldId = redis.call('GET', ownerUserKey)
@@ -47,6 +97,9 @@ end
 
 if status == 'released' or status == 'expired' then
     redis.call('ZREM', expiringKey, holdId)
+    redis.call('HSET', metaKey, 'inventoryReturned', '1')
+    redis.call('HSET', metaKey, 'status', status)
+    redis.call('EXPIRE', metaKey, 300)
     if owner ~= '' then
         local ownerUserKey = 'hold:user:' .. owner
         local indexedHoldId = redis.call('GET', ownerUserKey)
@@ -68,9 +121,13 @@ end
 
 if mode == 'expire' then
     redis.call('HSET', holdKey, 'status', 'expired')
+    redis.call('HSET', metaKey, 'status', 'expired')
 else
     redis.call('HSET', holdKey, 'status', 'released')
+    redis.call('HSET', metaKey, 'status', 'released')
 end
+redis.call('HSET', metaKey, 'inventoryReturned', '1')
+redis.call('EXPIRE', metaKey, 300)
 
 redis.call('ZREM', expiringKey, holdId)
 

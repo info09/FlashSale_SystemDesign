@@ -156,6 +156,46 @@ public class RedisHoldIntegrationTest : IAsyncLifetime
         results.Count(r => r.Status != HoldConsumeStatus.Success).Should().Be(9);
     }
 
+    [Fact]
+    public async Task ReleaseExpiredHoldAsync_WhenHoldExpired_ShouldReturnInventoryAndBeIdempotentOnRescan()
+    {
+        await _inventoryRepository.SetInventoryAsync("p-exp", 5);
+        var created = await _holdRepository.CreateHoldAsync("p-exp", 2, "c-exp");
+        var holdId = created.HoldId!.Value;
+        var past = DateTimeOffset.UtcNow.AddMinutes(-2).ToUnixTimeMilliseconds();
+
+        await _redisDatabase.HashSetAsync($"hold:{holdId}", "expiresAt", past);
+        await _redisDatabase.SortedSetAddAsync("holds:expiring", holdId.ToString(), past);
+
+        var expiredIds = await _holdRepository.GetExpiredHoldIdsAsync(DateTimeOffset.UtcNow, 10);
+        expiredIds.Should().Contain(holdId);
+
+        var first = await _holdRepository.ReleaseExpiredHoldAsync(holdId);
+        var second = await _holdRepository.ReleaseExpiredHoldAsync(holdId);
+        var thirdScanIds = await _holdRepository.GetExpiredHoldIdsAsync(DateTimeOffset.UtcNow, 10);
+
+        first.Status.Should().Be(HoldReleaseStatus.ExpiredReleased);
+        second.Status.Should().BeOneOf(HoldReleaseStatus.ExpiredReleased, HoldReleaseStatus.AlreadyReleased, HoldReleaseStatus.Released);
+        (await _inventoryRepository.GetInventoryAsync("p-exp")).Should().Be(5);
+        thirdScanIds.Should().NotContain(holdId);
+        (await _redisDatabase.KeyExistsAsync("hold:user:c-exp")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConsumeHoldAsync_WhenHoldExpired_ShouldReturnExpired()
+    {
+        await _inventoryRepository.SetInventoryAsync("p-exp2", 5);
+        var created = await _holdRepository.CreateHoldAsync("p-exp2", 1, "c-exp2");
+        var holdId = created.HoldId!.Value;
+        var past = DateTimeOffset.UtcNow.AddMinutes(-2).ToUnixTimeMilliseconds();
+
+        await _redisDatabase.HashSetAsync($"hold:{holdId}", "expiresAt", past);
+
+        var result = await _holdRepository.ConsumeHoldAsync(holdId, "c-exp2");
+
+        result.Status.Should().Be(HoldConsumeStatus.Expired);
+    }
+
     private static string ReadResource(System.Reflection.Assembly assembly, string resourceName)
     {
         using var stream = assembly.GetManifestResourceStream(resourceName);

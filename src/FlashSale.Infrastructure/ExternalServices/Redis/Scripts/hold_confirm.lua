@@ -42,6 +42,7 @@ end
 -- consume hold
 redis.call('HSET', holdKey, 'status', 'consumed')
 redis.call('ZREM', expiringKey, holdId)
+redis.call('HSET', 'hold:meta:' .. holdId, 'status', 'consumed')
 
 local indexedHoldId = redis.call('GET', userKey)
 if indexedHoldId == holdId then

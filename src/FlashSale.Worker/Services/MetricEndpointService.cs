@@ -2,9 +2,6 @@ using FlashSale.Application.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace FlashSale.Worker.Services;
 
@@ -32,7 +29,7 @@ public class MetricEndpointService : IHostedService
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseKestrel();
-        builder.WebHost.UseUrls("http://+:8080");
+        //builder.WebHost.UseUrls("http://+:8080");
 
         // Dung chung IServiceProvider tu Worker host de lay IMetricService (da dang ky qua AddApplication)
         builder.Services.AddSingleton(_serviceProvider);

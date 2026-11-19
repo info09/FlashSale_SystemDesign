@@ -46,7 +46,9 @@ end
 -- reserve inventory
 redis.call('DECRBY', inventoryKey, quantity)
 
--- create hold
+-- create hold (logical expiry tracked by expiresAt + holds:expiring; key TTL có buffer để WorkerUnHold kịp release/return inventory)
+local keyTtlSeconds = ttlSeconds + 120
+local metaKey = 'hold:meta:' .. holdId
 redis.call('HSET', holdKey,
     'holdId', holdId,
     'productId', productId,
@@ -55,10 +57,22 @@ redis.call('HSET', holdKey,
     'status', 'active',
     'expiresAt', expiresAtEpochMs
 )
-redis.call('EXPIRE', holdKey, ttlSeconds)
+redis.call('EXPIRE', holdKey, keyTtlSeconds)
+
+-- meta backup for release recovery if hold hash is evicted
+redis.call('HSET', metaKey,
+    'holdId', holdId,
+    'productId', productId,
+    'quantity', tostring(quantity),
+    'clientId', clientId,
+    'status', 'active',
+    'expiresAt', expiresAtEpochMs,
+    'inventoryReturned', '0'
+)
+redis.call('EXPIRE', metaKey, keyTtlSeconds)
 
 -- user index + expiry index
-redis.call('SET', userKey, holdId, 'EX', ttlSeconds)
+redis.call('SET', userKey, holdId, 'EX', keyTtlSeconds)
 redis.call('ZADD', expiringKey, tonumber(expiresAtEpochMs), holdId)
 
 return 'OK,' .. holdId .. ',' .. expiresAtEpochMs .. ',' .. tostring(ttlSeconds)

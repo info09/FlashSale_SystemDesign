@@ -48,6 +48,9 @@ public class Program
         // Background Service thu thap metric dinh ky (moi 30 giay mot lan, FR-06, NFR-07)
         builder.Services.AddHostedService<MetricWorkerService>();
 
+        // Background Service quét và nhả hold hết hạn (WorkerUnHold, mỗi 1 giây)
+        builder.Services.AddHostedService<WorkerUnHoldService>();
+
         var host = builder.Build();
 
         // Chay MetricEndpointService (Kestrel expose /api/v1/metrics cho Prometheus scrape)

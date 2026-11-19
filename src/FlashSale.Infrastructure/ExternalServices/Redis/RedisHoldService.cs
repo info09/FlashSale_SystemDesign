@@ -235,4 +235,71 @@ public class RedisHoldService : IHoldRepository
 
         return hold;
     }
+
+    /// <summary>
+    /// Lấy các HoldId đã hết hạn từ ZSET <c>holds:expiring</c> (score &lt;= now).
+    /// </summary>
+    /// <param name="now">Mốc thời gian hiện tại.</param>
+    /// <param name="limit">Số lượng tối đa.</param>
+    /// <param name="cancellationToken">Token hủy thao tác.</param>
+    /// <returns>Danh sách HoldId hết hạn.</returns>
+    public Task<IReadOnlyList<Guid>> GetExpiredHoldIdsAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken = default)
+    {
+        var values = _redisDatabase.SortedSetRangeByScore(
+            "holds:expiring",
+            double.NegativeInfinity,
+            now.ToUnixTimeMilliseconds(),
+            Exclude.None,
+            StackExchange.Redis.Order.Ascending,
+            0,
+            limit);
+
+        var ids = values
+            .Select(v => Guid.TryParse(v.ToString(), out var id) ? id : (Guid?)null)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<Guid>>(ids);
+    }
+
+    /// <summary>
+    /// Release hold hết hạn ở chế độ hệ thống (mode expire), idempotent, không yêu cầu ownership.
+    /// </summary>
+    /// <param name="holdId">Id hold cần release do hết hạn.</param>
+    /// <param name="cancellationToken">Token hủy thao tác.</param>
+    /// <returns>Trạng thái release.</returns>
+    public async Task<HoldReleaseResult> ReleaseExpiredHoldAsync(Guid holdId, CancellationToken cancellationToken = default)
+    {
+        var result = await _scriptExecutor.EvaluateAsync(
+            _releaseHoldScript,
+            new RedisKey[]
+            {
+                $"hold:{holdId}",
+                $"hold:user:", // placeholder; script resolves owner key from hold data
+                "holds:expiring"
+            },
+            new RedisValue[]
+            {
+                holdId.ToString(),
+                string.Empty,
+                "expire"
+            },
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(result))
+            return new HoldReleaseResult(HoldReleaseStatus.Invalid);
+
+        return result switch
+        {
+            "RELEASED" => new HoldReleaseResult(HoldReleaseStatus.Released),
+            "ALREADY_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.AlreadyReleased),
+            "EXPIRED_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.ExpiredReleased),
+            "NOT_FOUND" => new HoldReleaseResult(HoldReleaseStatus.NotFound),
+            "NOT_OWNED" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
+            "CONSUMED" => new HoldReleaseResult(HoldReleaseStatus.Consumed),
+            "INVALID" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
+            _ => new HoldReleaseResult(HoldReleaseStatus.Invalid)
+        };
+    }
 }
