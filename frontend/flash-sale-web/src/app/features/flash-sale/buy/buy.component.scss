@@ -254,6 +254,46 @@ input:focus-visible {
 .empty-icon { font-size: 24px; }
 .empty-state p { margin: 0; font-size: var(--font-size-body); }
 
+.hold-section {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(74, 222, 128, 0.1);
+}
+
+.hold-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.countdown {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 999px;
+  font-size: var(--font-size-body);
+  color: #166534;
+  background: #ecfdf5;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.countdown.warning {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.customer-form {
+  margin-top: var(--space-md);
+}
+
+.form-error {
+  color: var(--color-error);
+  font-size: var(--font-size-caption);
+}
+
 /* Tablet: 768px – 1023px */
 @media (min-width: 768px) and (max-width: 1023px) {
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

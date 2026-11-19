@@ -2,26 +2,31 @@
   <div class="card-header">
     <div class="title-block">
       <span class="eyebrow">FlashSale</span>
-      <h1>Mua hàng</h1>
-      <p class="subtitle">Gửi yêu cầu mua hàng nhanh. Bạn sẽ nhận phản hồi ngay sau khi hệ thống tiếp nhận yêu cầu.</p>
+      <h1>Mua hàng (Giữ chỗ)</h1>
+      <p class="subtitle">Giữ chỗ sản phẩm trong 1 phút, nhập thông tin và xác nhận để hoàn tất đặt hàng.</p>
     </div>
     <button type="button" class="btn ghost" (click)="logout()">Đăng xuất</button>
   </div>
 
   <div class="stats-row" aria-hidden="true">
-    <div class="stat-chip"><span class="dot"></span>Fast-path</div>
-    <div class="stat-chip">RateLimit + Inventory</div>
-    <div class="stat-chip accent">202 Accepted</div>
+    <div class="stat-chip"><span class="dot"></span>Hold 60s</div>
+    <div class="stat-chip">Inventory (Redis)</div>
+    <div class="stat-chip accent">Confirm → 202 Accepted</div>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form-grid">
+  <form [formGroup]="form" (ngSubmit)="createHold()" novalidate class="form-grid">
     <ui-form-field
       label="Mã sản phẩm (ProductId)"
       [required]="true"
       forId="buy-product-id"
       [loading]="loading()"
       [error]="form.controls.productId.touched && form.controls.productId.invalid ? 'Vui lòng nhập mã sản phẩm.' : null">
-      <input id="buy-product-id" type="text" formControlName="productId" placeholder="vd: product-test" [disabled]="loading()" />
+      <input
+        id="buy-product-id"
+        type="text"
+        formControlName="productId"
+        placeholder="vd: product-test"
+        [disabled]="loading() || holdState() === 'held' || holdState() === 'confirming' || holdState() === 'releasing'" />
     </ui-form-field>
 
     <ui-form-field
@@ -29,51 +34,147 @@
       [required]="true"
       forId="buy-quantity"
       [loading]="loading()"
-      [error]="form.controls.quantity.touched && form.controls.quantity.hasError('required')
-        ? 'Vui lòng nhập số lượng.'
-        : (form.controls.quantity.touched && form.controls.quantity.hasError('min') ? 'Số lượng phải lớn hơn 0.' : null)">
-      <input id="buy-quantity" type="number" min="1" formControlName="quantity" [disabled]="loading()" />
+      [error]="form.controls.quantity.touched && form.controls.quantity.invalid ? 'Số lượng phải lớn hơn hoặc bằng 1.' : null">
+      <input
+        id="buy-quantity"
+        type="number"
+        formControlName="quantity"
+        min="1"
+        [disabled]="loading() || holdState() === 'held' || holdState() === 'confirming' || holdState() === 'releasing'" />
     </ui-form-field>
 
-    @if (formError()) {
-      <div class="alert error full-row" role="alert"><span class="alert-icon" aria-hidden="true">!</span><span>{{ formError() }}</span></div>
-    }
+    <div class="form-error full-row" *ngIf="formError()">{{ formError() }}</div>
 
-    <div class="actions full-row">
-      <button class="btn primary" type="submit" [disabled]="loading()">
-        <span class="btn-glow"></span>
-        {{ loading() ? 'Đang gửi yêu cầu...' : 'Mua ngay' }}
+    <div class="actions full-row" *ngIf="holdState() === 'idle' || holdState() === 'holding' || holdState() === 'out_of_stock' || holdState() === 'expired' || holdState() === 'success'">
+      <button
+        type="submit"
+        class="btn primary"
+        [disabled]="loading()"
+        [attr.aria-busy]="loading()">
+        <span *ngIf="!loading(); else holdLoading">Mua ngay (Giữ chỗ)</span>
+        <ng-template #holdLoading>Đang giữ chỗ...</ng-template>
       </button>
-      <button class="btn secondary" type="button" (click)="reset()" [disabled]="loading()">Đặt lại</button>
+      <button
+        type="button"
+        class="btn secondary"
+        (click)="resetForNewHold()"
+        [disabled]="loading() || holdState() === 'holding'"
+        *ngIf="holdState() === 'expired' || holdState() === 'out_of_stock' || holdState() === 'success'">
+        Làm mới
+      </button>
     </div>
   </form>
 
-  <section class="result-section" aria-live="polite">
+  <section class="hold-section" *ngIf="holdState() === 'held' || holdState() === 'confirming' || holdState() === 'releasing'">
+    <div class="hold-header">
+      <h2>Thông tin xác nhận</h2>
+      <div class="countdown" [class.warning]="remainingSeconds() <= 10">
+        Còn lại: <strong>{{ remainingSeconds() }}</strong> giây
+      </div>
+    </div>
+    <p class="subtitle">Giữ chỗ sẽ hết hạn sau 1 phút nếu không xác nhận. Reload trang sẽ mất phiên giữ chỗ.</p>
+
+    <form [formGroup]="customerForm" (ngSubmit)="confirmHold()" novalidate class="form-grid customer-form">
+      <ui-form-field
+        label="Họ tên (Name)"
+        [required]="true"
+        forId="hold-name"
+        [loading]="loading()"
+        [error]="customerForm.controls.name.touched && customerForm.controls.name.invalid ? 'Vui lòng nhập họ tên.' : null">
+        <input
+          id="hold-name"
+          type="text"
+          formControlName="name"
+          placeholder="Nguyễn Văn A"
+          [disabled]="loading() || holdState() !== 'held'" />
+      </ui-form-field>
+
+      <ui-form-field
+        label="Số điện thoại (PhoneNumber)"
+        [required]="true"
+        forId="hold-phone"
+        [loading]="loading()"
+        [error]="customerForm.controls.phoneNumber.touched && customerForm.controls.phoneNumber.invalid ? 'Vui lòng nhập số điện thoại.' : null">
+        <input
+          id="hold-phone"
+          type="text"
+          formControlName="phoneNumber"
+          placeholder="0900000000"
+          [disabled]="loading() || holdState() !== 'held'" />
+      </ui-form-field>
+
+      <ui-form-field
+        label="Địa chỉ (Address)"
+        [required]="true"
+        forId="hold-address"
+        class="full-row"
+        [loading]="loading()"
+        [error]="customerForm.controls.address.touched && customerForm.controls.address.invalid ? 'Vui lòng nhập địa chỉ.' : null">
+        <input
+          id="hold-address"
+          type="text"
+          formControlName="address"
+          placeholder="Số nhà, đường, quận/huyện, tỉnh/thành"
+          [disabled]="loading() || holdState() !== 'held'" />
+      </ui-form-field>
+
+      <div class="form-error full-row" *ngIf="customerFormError()">{{ customerFormError() }}</div>
+
+      <div class="actions full-row">
+        <button
+          type="submit"
+          class="btn primary"
+          [disabled]="loading() || holdState() !== 'held' || remainingSeconds() <= 0"
+          [attr.aria-busy]="loading() && holdState() === 'confirming'">
+          <span *ngIf="holdState() !== 'confirming'; else confirming">Xác nhận đặt hàng</span>
+          <ng-template #confirming>Đang xác nhận...</ng-template>
+        </button>
+        <button
+          type="button"
+          class="btn secondary"
+          (click)="releaseHold()"
+          [disabled]="loading() || holdState() === 'confirming'">
+          <span *ngIf="holdState() !== 'releasing'; else releasing">Hủy giữ chỗ</span>
+          <ng-template #releasing>Đang hủy...</ng-template>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <div class="result-section" role="region" aria-live="polite" aria-label="Kết quả giữ chỗ và đặt hàng">
     <div class="result-header">
       <h2>Kết quả</h2>
-      <span class="result-hint">Trạng thái phản hồi từ API</span>
+      <span class="result-hint">Phản hồi từ hệ thống giữ chỗ/đặt hàng</span>
     </div>
 
-    @if (loading()) {
-      <div class="alert info loading-alert">
-        <span class="spinner" aria-hidden="true"></span>
-        <span>Đang gửi yêu cầu...</span>
-      </div>
-    } @else if (result(); as res) {
-      <div class="alert" [class.success]="res.type === 'success'" [class.error]="res.type === 'error'" [class.warning]="res.type === 'warning'" [class.info]="res.type === 'info'" role="alert">
-        <span class="alert-icon" aria-hidden="true">{{ res.type === 'success' ? '✓' : res.type === 'warning' ? '!' : res.type === 'error' ? '×' : 'i' }}</span>
-        <div>
+    <div *ngIf="loading() && (holdState() === 'holding' || holdState() === 'confirming' || holdState() === 'releasing')" class="alert info loading-alert">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Đang xử lý yêu cầu...</span>
+    </div>
+
+    <ng-container *ngIf="result() as res">
+      <div class="alert" [ngClass]="res.type">
+        <div class="alert-icon" aria-hidden="true">
+          <span *ngIf="res.type === 'success'">✓</span>
+          <span *ngIf="res.type === 'error'">!</span>
+          <span *ngIf="res.type === 'warning'">!</span>
+          <span *ngIf="res.type === 'info'">i</span>
+        </div>
+        <div class="alert-content">
           <p class="result-message">{{ res.message }}</p>
-          @if (res.orderId) {
-            <p class="result-meta"><strong>OrderId:</strong> <code>{{ res.orderId }}</code></p>
-          }
+          <p class="result-meta" *ngIf="res.orderId">
+            Mã đơn hàng (orderId): <code>{{ res.orderId }}</code>
+          </p>
+          <p class="result-meta" *ngIf="res.holdId && !res.orderId">
+            Mã giữ chỗ (holdId): <code>{{ res.holdId }}</code>
+          </p>
         </div>
       </div>
-    } @else {
-      <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🛒</div>
-        <p>Chưa có yêu cầu mua hàng. Nhập thông tin và nhấn <strong>"Mua ngay"</strong>.</p>
-      </div>
-    }
-  </section>
+    </ng-container>
+
+    <div *ngIf="!result() && !loading()" class="empty-state">
+      <div class="empty-icon" aria-hidden="true">🛒</div>
+      <p>Chưa có kết quả. Nhấn "Mua ngay (Giữ chỗ)" để kiểm tra tồn kho và giữ chỗ.</p>
+    </div>
+  </div>
 </section>

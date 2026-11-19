@@ -6,10 +6,12 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { BuyComponent } from './buy.component';
 import { authInterceptor } from '../../../core/auth/auth.interceptor';
 
-describe('Buy flow (UI + API integration)', () => {
+describe('Hold flow (UI + API integration)', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-19T10:00:00Z'));
     localStorage.clear();
     localStorage.setItem('flashsale_access_token', 'test-token');
 
@@ -32,83 +34,160 @@ describe('Buy flow (UI + API integration)', () => {
   afterEach(() => {
     httpMock.verify();
     localStorage.clear();
+    vi.useRealTimers();
   });
 
-  it('should submit buy request to API and show 202 accepted result', async () => {
+  it('should create hold, show countdown/form, confirm and show 202 accepted result', async () => {
     const fixture = TestBed.createComponent(BuyComponent);
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'product-test', quantity: 2 });
-    component.submit();
+    component.createHold();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/v1/flash-sale/buy');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ productId: 'product-test', quantity: 2 });
-    expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+    const holdReq = httpMock.expectOne('/api/v1/flash-sale/hold');
+    expect(holdReq.request.method).toBe('POST');
+    expect(holdReq.request.body).toEqual({ productId: 'product-test', quantity: 2 });
+    expect(holdReq.request.headers.get('Authorization')).toBe('Bearer test-token');
 
-    req.flush({ orderId: 'order-123', message: 'accepted' }, { status: 202, statusText: 'Accepted' });
+    holdReq.flush({
+      status: 'success',
+      code: 'HOLD_CREATED',
+      holdId: 'hold-123',
+      productId: 'product-test',
+      quantity: 2,
+      expiresAt: '2026-11-19T10:01:00Z',
+      ttlSeconds: 60,
+    });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
+    expect(component.holdState()).toBe('held');
+    expect(component.activeHoldId()).toBe('hold-123');
+    expect(component.remainingSeconds()).toBe(60);
+
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+    expect(component.remainingSeconds()).toBe(59);
+
+    component.customerForm.setValue({ name: 'Nguyen Van A', phoneNumber: '0900000000', address: 'Ha Noi' });
+    component.confirmHold();
+    fixture.detectChanges();
+
+    const confirmReq = httpMock.expectOne('/api/v1/flash-sale/hold/hold-123/confirm');
+    expect(confirmReq.request.method).toBe('POST');
+    expect(confirmReq.request.body).toEqual({ name: 'Nguyen Van A', phoneNumber: '0900000000', address: 'Ha Noi' });
+
+    confirmReq.flush(
+      {
+        status: 'success',
+        code: 'ORDER_ACCEPTED',
+        message: 'Đơn hàng đã được nhận và đang được xử lý.',
+        holdId: 'hold-123',
+        orderId: 'order-123',
+        correlationId: 'corr-123',
+      },
+      { status: 202, statusText: 'Accepted' },
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.holdState()).toBe('success');
     expect(component.result()?.type).toBe('success');
     expect(component.result()?.message).toContain('Đơn hàng đã được nhận và đang được xử lý.');
     expect(component.result()?.orderId).toBe('order-123');
-
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Đơn hàng đã được nhận và đang được xử lý.');
-    expect(el.textContent).toContain('order-123');
   });
 
-  it('should show RateLimit message when API returns 429', async () => {
+  it('should show out of stock when hold returns INSUFFICIENT_INVENTORY', async () => {
     const fixture = TestBed.createComponent(BuyComponent);
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
     component.form.setValue({ productId: 'product-test', quantity: 1 });
-    component.submit();
+    component.createHold();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/v1/flash-sale/buy');
-    req.flush({ code: 'RATE_LIMITED' }, { status: 429, statusText: 'Too Many Requests' });
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(component.result()?.type).toBe('warning');
-    expect(component.result()?.message).toContain('Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi và thử lại sau.');
-  });
-
-  it('should show insufficient Inventory message when API returns 400', async () => {
-    const fixture = TestBed.createComponent(BuyComponent);
-    fixture.detectChanges();
-
-    const component = fixture.componentInstance;
-    component.form.setValue({ productId: 'product-test', quantity: 1 });
-    component.submit();
-    fixture.detectChanges();
-
-    const req = httpMock.expectOne('/api/v1/flash-sale/buy');
+    const req = httpMock.expectOne('/api/v1/flash-sale/hold');
     req.flush({ code: 'INSUFFICIENT_INVENTORY', message: 'Hết hàng' }, { status: 400, statusText: 'Bad Request' });
     fixture.detectChanges();
     await fixture.whenStable();
 
+    expect(component.holdState()).toBe('out_of_stock');
     expect(component.result()?.type).toBe('error');
-    expect(component.result()?.message).toContain('Sản phẩm đã hết hàng. Đơn hàng không được tạo.');
+    expect(component.result()?.message).toContain('Sản phẩm đã hết hàng');
   });
 
-  it('should logout and navigate to login on 401', async () => {
+  it('should mark hold expired when countdown reaches zero', async () => {
+    const fixture = TestBed.createComponent(BuyComponent);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.form.setValue({ productId: 'product-test', quantity: 1 });
+    component.createHold();
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/v1/flash-sale/hold').flush({
+      status: 'success',
+      code: 'HOLD_CREATED',
+      holdId: 'hold-exp',
+      expiresAt: '2026-11-19T10:00:02Z',
+      ttlSeconds: 2,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    vi.advanceTimersByTime(2000);
+    fixture.detectChanges();
+
+    expect(component.holdState()).toBe('expired');
+    expect(component.result()?.message).toContain('Giữ chỗ đã hết hạn');
+  });
+
+  it('should handle confirm failure when hold expired (410)', async () => {
+    const fixture = TestBed.createComponent(BuyComponent);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.form.setValue({ productId: 'product-test', quantity: 1 });
+    component.createHold();
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/v1/flash-sale/hold').flush({
+      status: 'success',
+      code: 'HOLD_CREATED',
+      holdId: 'hold-410',
+      expiresAt: '2026-11-19T10:01:00Z',
+      ttlSeconds: 60,
+    });
+    await fixture.whenStable();
+
+    component.customerForm.setValue({ name: 'A', phoneNumber: '0900', address: 'HN' });
+    component.confirmHold();
+    fixture.detectChanges();
+
+    const confirmReq = httpMock.expectOne('/api/v1/flash-sale/hold/hold-410/confirm');
+    confirmReq.flush({ code: 'HOLD_EXPIRED', message: 'Hết hạn' }, { status: 410, statusText: 'Gone' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.holdState()).toBe('expired');
+    expect(component.result()?.message).toContain('Giữ chỗ đã hết hạn');
+  });
+
+  it('should logout and navigate to login on 401 when creating hold', async () => {
     const fixture = TestBed.createComponent(BuyComponent);
     const router = TestBed.inject(Router);
     const navSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
 
     fixture.componentInstance.form.setValue({ productId: 'product-test', quantity: 1 });
-    fixture.componentInstance.submit();
+    fixture.componentInstance.createHold();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/v1/flash-sale/buy');
+    const req = httpMock.expectOne('/api/v1/flash-sale/hold');
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();
     await fixture.whenStable();
