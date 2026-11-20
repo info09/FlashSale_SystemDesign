@@ -1,6 +1,5 @@
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 

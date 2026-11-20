@@ -1,27 +1,35 @@
+using System.Text;
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain;
 using FlashSale.Worker.Consumers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using System.Text;
 
 namespace FlashSale.Worker.Services;
 
 /// <summary>
-/// Background Service tieu thu message OrderNotification tu RabbitMQ Queue (order_notification_queue).
-/// Chay doc lap tu Worker chinh (order_pipeline_queue), dam bao su kien Outbox da xuat phat duoc tien tiep xu ly downstream.
-/// 
-/// Thuat ngua chuan theo docs/domain-glossary.md: OrderNotificationWorkerService, AsyncWorker, Queue, Message, OrderNotification, RabbitMQ.
+/// Background Service tiêu thụ message OrderNotification từ RabbitMQ Queue (order_notification_queue).
 /// </summary>
 public class OrderNotificationWorkerService : BackgroundService
 {
-    private const string RetryCountHeader = "x-retry-count";
-
     private readonly ILogger<OrderNotificationWorkerService> _logger;
-    private readonly IModel _channel;
+    private readonly IRabbitMqConnectionProvider? _connectionProvider;
     private readonly OrderNotificationConsumerService _consumer;
+    private readonly object _channelSync = new();
+    private IModel? _channel;
 
+    public OrderNotificationWorkerService(
+        ILogger<OrderNotificationWorkerService> logger,
+        IRabbitMqConnectionProvider connectionProvider,
+        OrderNotificationConsumerService consumer)
+    {
+        _logger = logger;
+        _connectionProvider = connectionProvider;
+        _consumer = consumer;
+    }
+
+    // Constructor phục vụ unit test với channel cố định.
     public OrderNotificationWorkerService(
         ILogger<OrderNotificationWorkerService> logger,
         IModel channel,
@@ -32,51 +40,111 @@ public class OrderNotificationWorkerService : BackgroundService
         _consumer = consumer;
     }
 
-    /// <summary>
-    /// Vong lap chinh cua Background Service: doc message tu Queue order_notification_queue qua BasicGet.
-    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("OrderNotificationWorkerService is running.");
 
-        // Khai bao Queue neu chua ton tai
-        _channel.QueueDeclare(
-            queue: RabbitMqConstants.OrderNotificationQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            var result = _channel.BasicGet(queue: RabbitMqConstants.OrderNotificationQueueName, autoAck: false);
-            if (result is not null)
+            try
             {
-                await HandleDeliveryAsync(result, stoppingToken);
+                var channel = EnsureChannel();
+                if (channel is null)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    continue;
+                }
+
+                var result = channel.BasicGet(queue: RabbitMqConstants.OrderNotificationQueueName, autoAck: false);
+                if (result is not null)
+                {
+                    await HandleDeliveryAsync(result, stoppingToken);
+                }
+                else
+                {
+                    await Task.Delay(100, stoppingToken);
+                }
             }
-            else
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(100, stoppingToken);
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Lỗi vòng lặp consume order_notification_queue, sẽ thử lại.");
+                ResetChannel();
+                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }
     }
 
-    /// <summary>
-    /// Xu ly mot delivery duoc lay tu Queue order_notification_queue.
-    /// </summary>
     internal async Task HandleDeliveryAsync(BasicGetResult result, CancellationToken stoppingToken)
     {
+        var channel = GetRequiredChannel();
         try
         {
             var json = Encoding.UTF8.GetString(result.Body.ToArray());
             await _consumer.ProcessMessageAsync(json, stoppingToken);
-            _channel.BasicAck(result.DeliveryTag, false);
+            channel.BasicAck(result.DeliveryTag, false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Loi xu ly message notification {MessageId} tu Queue {Queue}.",
                 result.BasicProperties?.MessageId, RabbitMqConstants.OrderNotificationQueueName);
-            _channel.BasicNack(result.DeliveryTag, false, false);
+            channel.BasicNack(result.DeliveryTag, false, false);
         }
+    }
+
+    private IModel? EnsureChannel()
+    {
+        lock (_channelSync)
+        {
+            if (_connectionProvider is null)
+                return _channel;
+
+            if (_channel is { IsOpen: true })
+                return _channel;
+
+            ResetChannelUnsafe();
+
+            if (!_connectionProvider.TryGetConnection(out var connection) || connection is null || !connection.IsOpen)
+                return null;
+
+            var channel = connection.CreateModel();
+            channel.QueueDeclare(
+                queue: RabbitMqConstants.OrderNotificationQueueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+            _channel = channel;
+            return _channel;
+        }
+    }
+
+    private IModel GetRequiredChannel()
+    {
+        lock (_channelSync)
+        {
+            if (_channel is { IsOpen: true })
+                return _channel;
+        }
+
+        return EnsureChannel() ?? throw new InvalidOperationException("RabbitMQ channel chưa sẵn sàng.");
+    }
+
+    private void ResetChannel()
+    {
+        lock (_channelSync)
+        {
+            ResetChannelUnsafe();
+        }
+    }
+
+    private void ResetChannelUnsafe()
+    {
+        try { _channel?.Close(); } catch { /* ignore */ }
+        try { _channel?.Dispose(); } catch { /* ignore */ }
+        _channel = null;
     }
 }

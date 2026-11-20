@@ -3,7 +3,6 @@ using FlashSale.Application.Interfaces;
 using FlashSale.Domain;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using Microsoft.Extensions.Logging;
 
 namespace FlashSale.Worker.Consumers;

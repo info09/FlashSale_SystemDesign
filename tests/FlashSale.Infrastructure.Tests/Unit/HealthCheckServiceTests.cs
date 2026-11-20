@@ -1,15 +1,11 @@
-using FluentAssertions;
 using FlashSale.Application.Interfaces;
-using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Infrastructure.Persistence;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using RabbitMQ.Client;
 using StackExchange.Redis;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace FlashSale.Infrastructure.Tests.Unit;
@@ -18,7 +14,8 @@ public class HealthCheckServiceTests
 {
     private readonly Mock<IDatabaseConnectionChecker> _databaseConnectionCheckerMock;
     private readonly Mock<IDatabase> _redisDatabaseMock;
-    private readonly Mock<RabbitMQ.Client.IConnection> _rabbitMqConnectionMock;
+    private readonly Mock<IRabbitMqConnectionProvider> _rabbitMqConnectionProviderMock;
+    private readonly Mock<IConnection> _rabbitMqConnectionMock;
     private readonly Mock<ILogger<HealthCheckService>> _loggerMock;
     private readonly HealthCheckService _service;
 
@@ -26,20 +23,20 @@ public class HealthCheckServiceTests
     {
         _databaseConnectionCheckerMock = new Mock<IDatabaseConnectionChecker>();
         _redisDatabaseMock = new Mock<IDatabase>();
-        _rabbitMqConnectionMock = new Mock<RabbitMQ.Client.IConnection>();
+        _rabbitMqConnectionProviderMock = new Mock<IRabbitMqConnectionProvider>();
+        _rabbitMqConnectionMock = new Mock<IConnection>();
         _loggerMock = new Mock<ILogger<HealthCheckService>>();
 
         _service = new HealthCheckService(
             _databaseConnectionCheckerMock.Object,
             _redisDatabaseMock.Object,
-            _rabbitMqConnectionMock.Object,
+            _rabbitMqConnectionProviderMock.Object,
             _loggerMock.Object);
     }
 
     [Fact]
     public async Task CheckAllAsync_WhenAllServicesHealthy_ShouldReturnHealthy()
     {
-        // Arrange
         _databaseConnectionCheckerMock
             .Setup(x => x.CanConnectAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -48,14 +45,14 @@ public class HealthCheckServiceTests
             .Setup(x => x.PingAsync(It.IsAny<CommandFlags>()))
             .ReturnsAsync(TimeSpan.FromMilliseconds(5));
 
-        _rabbitMqConnectionMock
-            .SetupGet(x => x.IsOpen)
+        var connection = _rabbitMqConnectionMock.Object;
+        _rabbitMqConnectionMock.SetupGet(x => x.IsOpen).Returns(true);
+        _rabbitMqConnectionProviderMock
+            .Setup(x => x.TryGetConnection(out connection))
             .Returns(true);
 
-        // Act
         var result = await _service.CheckAllAsync(CancellationToken.None);
 
-        // Assert
         result.Status.Should().Be("Healthy");
         result.IsHealthy.Should().BeTrue();
         result.Checks["PostgreSQLPrimary"].Should().Be("Healthy");
@@ -66,7 +63,6 @@ public class HealthCheckServiceTests
     [Fact]
     public async Task CheckAllAsync_WhenPostgreSQLUnhealthy_ShouldReturnUnhealthy()
     {
-        // Arrange
         _databaseConnectionCheckerMock
             .Setup(x => x.CanConnectAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -75,14 +71,14 @@ public class HealthCheckServiceTests
             .Setup(x => x.PingAsync(It.IsAny<CommandFlags>()))
             .ReturnsAsync(TimeSpan.FromMilliseconds(5));
 
-        _rabbitMqConnectionMock
-            .SetupGet(x => x.IsOpen)
+        var connection = _rabbitMqConnectionMock.Object;
+        _rabbitMqConnectionMock.SetupGet(x => x.IsOpen).Returns(true);
+        _rabbitMqConnectionProviderMock
+            .Setup(x => x.TryGetConnection(out connection))
             .Returns(true);
 
-        // Act
         var result = await _service.CheckAllAsync(CancellationToken.None);
 
-        // Assert
         result.Status.Should().Be("Unhealthy");
         result.IsHealthy.Should().BeFalse();
         result.Checks["PostgreSQLPrimary"].Should().Be("Unhealthy");
@@ -93,32 +89,30 @@ public class HealthCheckServiceTests
     [Fact]
     public async Task CheckAllAsync_WhenRedisUnhealthy_ShouldReturnUnhealthy()
     {
-        // Arrange
         _databaseConnectionCheckerMock
             .Setup(x => x.CanConnectAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         _redisDatabaseMock
             .Setup(x => x.PingAsync(It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new System.Exception("Redis connection failed"));
+            .ThrowsAsync(new Exception("Redis connection failed"));
 
-        _rabbitMqConnectionMock
-            .SetupGet(x => x.IsOpen)
+        var connection = _rabbitMqConnectionMock.Object;
+        _rabbitMqConnectionMock.SetupGet(x => x.IsOpen).Returns(true);
+        _rabbitMqConnectionProviderMock
+            .Setup(x => x.TryGetConnection(out connection))
             .Returns(true);
 
-        // Act
         var result = await _service.CheckAllAsync(CancellationToken.None);
 
-        // Assert
         result.Status.Should().Be("Unhealthy");
         result.IsHealthy.Should().BeFalse();
         result.Checks["Redis"].Should().Be("Unhealthy");
     }
 
     [Fact]
-    public async Task CheckAllAsync_WhenRabbitMQUnhealthy_ShouldReturnUnhealthy()
+    public async Task CheckAllAsync_WhenRabbitMQCannotConnect_ShouldReturnUnhealthy()
     {
-        // Arrange
         _databaseConnectionCheckerMock
             .Setup(x => x.CanConnectAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -127,14 +121,13 @@ public class HealthCheckServiceTests
             .Setup(x => x.PingAsync(It.IsAny<CommandFlags>()))
             .ReturnsAsync(TimeSpan.FromMilliseconds(5));
 
-        _rabbitMqConnectionMock
-            .SetupGet(x => x.IsOpen)
+        IConnection? connection = null;
+        _rabbitMqConnectionProviderMock
+            .Setup(x => x.TryGetConnection(out connection))
             .Returns(false);
 
-        // Act
         var result = await _service.CheckAllAsync(CancellationToken.None);
 
-        // Assert
         result.Status.Should().Be("Unhealthy");
         result.IsHealthy.Should().BeFalse();
         result.Checks["RabbitMQ"].Should().Be("Unhealthy");

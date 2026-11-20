@@ -19,7 +19,8 @@ public interface IOutboxService
     /// <param name="payload">Noi dung su kien dang chuyen doi JSON.</param>
     /// <param name="correlationId">Id lien ket truy xuat qua he thong.</param>
     /// <param name="cancellationToken">Token huy bo thao tac bat dong bo.</param>
-    Task AddOutboxAsync(Guid orderId, string eventType, string payload, Guid correlationId, CancellationToken cancellationToken = default);
+    /// <returns>Ghi Outbox vua duoc tao.</returns>
+    Task<Outbox> AddOutboxAsync(Guid orderId, string eventType, string payload, Guid correlationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lay danh sach cac ghi Outbox chua duoc xu ly (ProcessingStatus = Pending hoac Failed va RetryCount < MaxRetry).

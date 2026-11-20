@@ -1,28 +1,41 @@
+using System.Text;
+using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
 using FlashSale.Domain;
 using FlashSale.Worker.Consumers;
 using RabbitMQ.Client;
-using System.Text;
 
 namespace FlashSale.Worker;
 
 /// <summary>
-/// Async Worker (.NET 8 Background Service) tieu thu message tu RabbitMQ Queue (order_pipeline_queue).
-/// Moi message duoc xu ly: tao Order + ghi Outbox trong cung 1 transaction PostgreSQLPrimary (Transactional Outbox Pattern).
+/// Async Worker (.NET 8 Background Service) tiêu thụ message từ RabbitMQ Queue (order_pipeline_queue).
 /// Trien khai Retry voi ExponentialBackoff (toi da 3 lan) khi xu ly message that bai.
 /// Sau 3 lan that bai, message duoc chuyen vao DeadLetterQueue (order_pipeline_dlq) (FR-05).
-/// 
-/// Thuat ngua chuan theo docs/domain-glossary.md: AsyncWorker, Queue, Message, Order, Outbox, PostgreSQLPrimary, TransactionalOutboxPattern, ExponentialBackoff, Retry, DeadLetterQueue.
 /// </summary>
 public class Worker : BackgroundService
 {
     private const string RetryCountHeader = "x-retry-count";
 
     private readonly ILogger<Worker> _logger;
-    private readonly IModel _channel;
+    private readonly IRabbitMqConnectionProvider? _connectionProvider;
     private readonly OrderCreatedConsumerService _consumer;
     private readonly ExponentialBackoffPolicy _backoffPolicy;
+    private readonly object _channelSync = new();
+    private IModel? _channel;
 
+    public Worker(
+        ILogger<Worker> logger,
+        IRabbitMqConnectionProvider connectionProvider,
+        OrderCreatedConsumerService consumer,
+        ExponentialBackoffPolicy backoffPolicy)
+    {
+        _logger = logger;
+        _connectionProvider = connectionProvider;
+        _consumer = consumer;
+        _backoffPolicy = backoffPolicy;
+    }
+
+    // Constructor phục vụ unit test với channel cố định.
     public Worker(
         ILogger<Worker> logger,
         IModel channel,
@@ -39,46 +52,48 @@ public class Worker : BackgroundService
     {
         _logger.LogInformation("FlashSale Worker is running");
 
-        // Khai bao Queue neu chua ton tai (cung arguments voi RabbitMqPublisherService de tranh PRECONDITION_FAILED)
-        var queueArgs = new Dictionary<string, object>
-        {
-            { "x-dead-letter-exchange", RabbitMqConstants.DeadLetterExchangeName },
-            { "x-dead-letter-routing-key", RabbitMqConstants.DeadLetterRoutingKey },
-            { "x-max-length", 100000 },
-            { "x-message-ttl", 86400000 } // 24 hours
-        };
-        _channel.QueueDeclare(
-            queue: RabbitMqConstants.QueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: queueArgs);
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            var result = _channel.BasicGet(queue: RabbitMqConstants.QueueName, autoAck: false);
-            if (result is not null)
+            try
             {
-                await HandleDeliveryAsync(result, stoppingToken);
+                var channel = EnsureChannel();
+                if (channel is null)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    continue;
+                }
+
+                var result = channel.BasicGet(queue: RabbitMqConstants.QueueName, autoAck: false);
+                if (result is not null)
+                {
+                    await HandleDeliveryAsync(result, stoppingToken);
+                }
+                else
+                {
+                    await Task.Delay(100, stoppingToken);
+                }
             }
-            else
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(100, stoppingToken);
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Lỗi vòng lặp consume order_pipeline_queue, sẽ thử lại.");
+                ResetChannel();
+                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }
     }
 
-    /// <summary>
-    /// Xu ly mot delivery duoc lay tu Queue.
-    /// Neu xu ly thanh cong thi Ack. Neu that bai thi Retry (toi da 3 lan) hoac chuyen vao DeadLetterQueue.
-    /// </summary>
     internal async Task HandleDeliveryAsync(BasicGetResult result, CancellationToken stoppingToken)
     {
+        var channel = GetRequiredChannel();
         try
         {
             var json = Encoding.UTF8.GetString(result.Body.ToArray());
             await _consumer.ProcessMessageAsync(json, stoppingToken);
-            _channel.BasicAck(result.DeliveryTag, false);
+            channel.BasicAck(result.DeliveryTag, false);
         }
         catch (Exception ex)
         {
@@ -86,31 +101,102 @@ public class Worker : BackgroundService
 
             if (_backoffPolicy.CanRetry(retryCount))
             {
-                // Doi theo Exponential Backoff truoc khi gui lai message
                 var delay = _backoffPolicy.GetDelay(retryCount);
                 _logger.LogWarning(ex,
                     "That bai xu ly message {MessageId}, thu lai lan {RetryCount} sau {Delay}ms.",
                     result.BasicProperties?.MessageId, retryCount + 1, delay.TotalMilliseconds);
                 await Task.Delay(delay, stoppingToken);
 
-                // Gui lai message voi retry count tang len
-                RepublishMessage(result.Body.ToArray(), result.BasicProperties, retryCount + 1);
-
-                // Xoa message cu khoi queue (khong requeue, vi da gui lai tren)
-                _channel.BasicNack(result.DeliveryTag, false, false);
+                RepublishMessage(channel, result.Body.ToArray(), result.BasicProperties, retryCount + 1);
+                channel.BasicNack(result.DeliveryTag, false, false);
             }
             else
             {
-                // Vuot qua so lan thu lai toi da, chuyen message vao DeadLetterQueue (FR-05)
                 _logger.LogError(ex,
                     "Message {MessageId} vuot qua {MaxRetryCount} lan thu lai, chuyen vao DeadLetterQueue {DeadLetterQueueName}.",
                     result.BasicProperties?.MessageId, _backoffPolicy.MaxRetryCount, RabbitMqConstants.DeadLetterQueueName);
-                MoveToDeadLetterQueue(result.Body.ToArray(), result.BasicProperties);
-
-                // Ack de xoa message khoi Queue chinh (da luu luu vao DLQ)
-                _channel.BasicAck(result.DeliveryTag, false);
+                MoveToDeadLetterQueue(channel, result.Body.ToArray(), result.BasicProperties);
+                channel.BasicAck(result.DeliveryTag, false);
             }
         }
+    }
+
+    private IModel? EnsureChannel()
+    {
+        lock (_channelSync)
+        {
+            if (_connectionProvider is null)
+                return _channel;
+
+            if (_channel is { IsOpen: true })
+                return _channel;
+
+            ResetChannelUnsafe();
+
+            if (!_connectionProvider.TryGetConnection(out var connection) || connection is null || !connection.IsOpen)
+                return null;
+
+            var channel = connection.CreateModel();
+            DeclareTopology(channel);
+            _channel = channel;
+            return _channel;
+        }
+    }
+
+    private IModel GetRequiredChannel()
+    {
+        lock (_channelSync)
+        {
+            if (_channel is { IsOpen: true })
+                return _channel;
+        }
+
+        return EnsureChannel() ?? throw new InvalidOperationException("RabbitMQ channel chưa sẵn sàng.");
+    }
+
+    private void ResetChannel()
+    {
+        lock (_channelSync)
+        {
+            ResetChannelUnsafe();
+        }
+    }
+
+    private void ResetChannelUnsafe()
+    {
+        try { _channel?.Close(); } catch { /* ignore */ }
+        try { _channel?.Dispose(); } catch { /* ignore */ }
+        _channel = null;
+    }
+
+    private static void DeclareTopology(IModel channel)
+    {
+        channel.ExchangeDeclare(RabbitMqConstants.ExchangeName, ExchangeType.Direct, durable: true, autoDelete: false);
+        channel.ExchangeDeclare(RabbitMqConstants.DeadLetterExchangeName, ExchangeType.Direct, durable: true, autoDelete: false);
+
+        var queueArgs = new Dictionary<string, object>
+        {
+            { "x-dead-letter-exchange", RabbitMqConstants.DeadLetterExchangeName },
+            { "x-dead-letter-routing-key", RabbitMqConstants.DeadLetterRoutingKey },
+            { "x-max-length", 100000 },
+            { "x-message-ttl", 86400000 }
+        };
+
+        channel.QueueDeclare(
+            queue: RabbitMqConstants.QueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: queueArgs);
+
+        channel.QueueBind(RabbitMqConstants.QueueName, RabbitMqConstants.ExchangeName, RabbitMqConstants.RoutingKey);
+
+        channel.QueueDeclare(RabbitMqConstants.DeadLetterQueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+        channel.QueueBind(RabbitMqConstants.DeadLetterQueueName, RabbitMqConstants.DeadLetterExchangeName, RabbitMqConstants.DeadLetterRoutingKey);
+
+        channel.ExchangeDeclare(RabbitMqConstants.OrderNotificationExchangeName, ExchangeType.Direct, durable: true, autoDelete: false);
+        channel.QueueDeclare(RabbitMqConstants.OrderNotificationQueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+        channel.QueueBind(RabbitMqConstants.OrderNotificationQueueName, RabbitMqConstants.OrderNotificationExchangeName, RabbitMqConstants.OrderNotificationRoutingKey);
     }
 
     private static int GetRetryCount(IBasicProperties? properties)
@@ -121,7 +207,6 @@ public class Worker : BackgroundService
         if (!properties.Headers.TryGetValue(RetryCountHeader, out var value))
             return 0;
 
-        // RabbitMQ luu header nhu byte[], string, hoac int tuong ung
         if (value is byte[] bytes)
         {
             if (int.TryParse(Encoding.UTF8.GetString(bytes), out var parsedBytes))
@@ -138,9 +223,9 @@ public class Worker : BackgroundService
         return 0;
     }
 
-    private void RepublishMessage(byte[] body, IBasicProperties? properties, int newRetryCount)
+    private static void RepublishMessage(IModel channel, byte[] body, IBasicProperties? properties, int newRetryCount)
     {
-        var newProps = _channel.CreateBasicProperties();
+        var newProps = channel.CreateBasicProperties();
         newProps.Persistent = properties?.Persistent ?? true;
         newProps.ContentType = properties?.ContentType ?? "application/json";
         newProps.CorrelationId = properties?.CorrelationId;
@@ -155,7 +240,7 @@ public class Worker : BackgroundService
         headers[RetryCountHeader] = newRetryCount;
         newProps.Headers = headers;
 
-        _channel.BasicPublish(
+        channel.BasicPublish(
             exchange: RabbitMqConstants.ExchangeName,
             routingKey: RabbitMqConstants.RoutingKey,
             mandatory: false,
@@ -163,12 +248,9 @@ public class Worker : BackgroundService
             body: body);
     }
 
-    /// <summary>
-    /// Chuyen message vao DeadLetterQueue qua DeadLetterExchange (flash_sale_dlq_exchange, routing key order.dlq).
-    /// </summary>
-    private void MoveToDeadLetterQueue(byte[] body, IBasicProperties? properties)
+    private static void MoveToDeadLetterQueue(IModel channel, byte[] body, IBasicProperties? properties)
     {
-        var newProps = _channel.CreateBasicProperties();
+        var newProps = channel.CreateBasicProperties();
         newProps.Persistent = properties?.Persistent ?? true;
         newProps.ContentType = properties?.ContentType ?? "application/json";
         newProps.CorrelationId = properties?.CorrelationId;
@@ -183,7 +265,7 @@ public class Worker : BackgroundService
         headers[RetryCountHeader] = GetRetryCount(properties);
         newProps.Headers = headers;
 
-        _channel.BasicPublish(
+        channel.BasicPublish(
             exchange: RabbitMqConstants.DeadLetterExchangeName,
             routingKey: RabbitMqConstants.DeadLetterRoutingKey,
             mandatory: false,

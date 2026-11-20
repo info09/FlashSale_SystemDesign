@@ -2,7 +2,6 @@ using FlashSale.Application;
 using FlashSale.Infrastructure;
 using FlashSale.Worker.Consumers;
 using FlashSale.Worker.Services;
-using RabbitMQ.Client;
 
 namespace FlashSale.Worker;
 
@@ -14,24 +13,11 @@ public class Program
         var builder = Host.CreateApplicationBuilder(args);
         builder.Configuration.AddEnvironmentVariables();
 
-        // Đăng ký Infrastructure (PostgreSQLPrimary, Redis, RabbitMqPublisherService, OrderRepository, OutboxRepository, UnitOfWork, Identity)
+        // Đăng ký Infrastructure (PostgreSQLPrimary, Redis, RabbitMQ provider/publisher lazy, repositories, Identity)
         builder.Services.AddInfrastructure(builder.Configuration);
 
-        // Đăng ký Application (IOrderService, IOutboxService, IOutboxPublisher, validators)
+        // Đăng ký Application (services, outbox, validators)
         builder.Services.AddApplication(builder.Configuration);
-
-        // RabbitMQ connection & channel (singleton, cung nhom voi ApiGateway)
-        var rabbitMqConnectionString = builder.Configuration["RABBITMQ_CONNECTION_STRING"]
-            ?? "amqp://guest:guest@localhost:5672/";
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(rabbitMqConnectionString),
-            AutomaticRecoveryEnabled = false,
-            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
-        };
-        var connection = factory.CreateConnection();
-        builder.Services.AddSingleton<IConnection>(connection);
-        builder.Services.AddSingleton<IModel>(connection.CreateModel());
 
         // Dich vu tieu thu message OrderCreated tu Queue
         builder.Services.AddScoped<OrderCreatedConsumerService>();
@@ -62,6 +48,3 @@ public class Program
         host.Run();
     }
 }
-
-
-

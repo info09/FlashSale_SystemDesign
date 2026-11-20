@@ -15,18 +15,18 @@ public class HealthCheckService : IHealthCheckService
 {
     private readonly IDatabaseConnectionChecker _databaseConnectionChecker;
     private readonly IDatabase _redisDatabase;
-    private readonly RabbitMQ.Client.IConnection _rabbitMqConnection;
+    private readonly IRabbitMqConnectionProvider _rabbitMqConnectionProvider;
     private readonly ILogger<HealthCheckService> _logger;
 
     public HealthCheckService(
         IDatabaseConnectionChecker databaseConnectionChecker,
         IDatabase redisDatabase,
-        RabbitMQ.Client.IConnection rabbitMqConnection,
+        IRabbitMqConnectionProvider rabbitMqConnectionProvider,
         ILogger<HealthCheckService> logger)
     {
         _databaseConnectionChecker = databaseConnectionChecker;
         _redisDatabase = redisDatabase;
-        _rabbitMqConnection = rabbitMqConnection;
+        _rabbitMqConnectionProvider = rabbitMqConnectionProvider;
         _logger = logger;
     }
 
@@ -73,7 +73,7 @@ public class HealthCheckService : IHealthCheckService
     {
         try
         {
-            return _rabbitMqConnection.IsOpen;
+            return _rabbitMqConnectionProvider.TryGetConnection(out var connection) && connection is { IsOpen: true };
         }
         catch (Exception ex)
         {

@@ -185,7 +185,7 @@ public class RedisHoldService : IHoldRepository
             "ALREADY_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.AlreadyReleased),
             "EXPIRED_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.ExpiredReleased),
             "NOT_FOUND" => new HoldReleaseResult(HoldReleaseStatus.NotFound),
-            "NOT_OWNED" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
+            "NOT_OWNED" => new HoldReleaseResult(HoldReleaseStatus.NotOwned),
             "CONSUMED" => new HoldReleaseResult(HoldReleaseStatus.Consumed),
             "INVALID" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
             _ => new HoldReleaseResult(HoldReleaseStatus.Invalid)
@@ -296,7 +296,7 @@ public class RedisHoldService : IHoldRepository
             "ALREADY_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.AlreadyReleased),
             "EXPIRED_RELEASED" => new HoldReleaseResult(HoldReleaseStatus.ExpiredReleased),
             "NOT_FOUND" => new HoldReleaseResult(HoldReleaseStatus.NotFound),
-            "NOT_OWNED" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
+            "NOT_OWNED" => new HoldReleaseResult(HoldReleaseStatus.NotOwned),
             "CONSUMED" => new HoldReleaseResult(HoldReleaseStatus.Consumed),
             "INVALID" => new HoldReleaseResult(HoldReleaseStatus.Invalid),
             _ => new HoldReleaseResult(HoldReleaseStatus.Invalid)

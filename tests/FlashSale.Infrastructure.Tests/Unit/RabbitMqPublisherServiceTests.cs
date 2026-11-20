@@ -1,12 +1,11 @@
-using FluentAssertions;
+using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Domain;
 using FlashSale.Domain.Entities;
 using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+using FluentAssertions;
 using Moq;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Xunit;
-using FlashSale.Application.Features.Inventory.Events;
 
 namespace FlashSale.Infrastructure.Tests.Unit;
 
@@ -14,7 +13,6 @@ public class RabbitMqPublisherServiceTests
 {
     private readonly Mock<IConnection> _connectionMock;
     private readonly Mock<IModel> _channelMock;
-    private readonly RabbitMqPublisherService _service;
 
     public RabbitMqPublisherServiceTests()
     {
@@ -25,59 +23,75 @@ public class RabbitMqPublisherServiceTests
             .Setup(c => c.CreateModel())
             .Returns(_channelMock.Object);
 
-        _service = new RabbitMqPublisherService(_connectionMock.Object);
-    }
-
-    [Fact]
-    public void Constructor_ShouldCreateConnectionAndChannel()
-    {
-        // Arrange & Act
-        var service = new RabbitMqPublisherService(_connectionMock.Object);
-
-        // Assert
-        service.Should().NotBeNull();
-        _connectionMock.Verify(c => c.CreateModel(), Times.AtLeastOnce);
-    }
-
-    [Fact]
-    public async Task PublishOrderCreatedAsync_ShouldPublishMessageToQueue()
-    {
-        // Arrange
-        var message = OrderCreatedMessage.Create(
-            new FlashSale.Domain.Entities.Order("product-1", 5, "client-1"),
-            Guid.NewGuid());
-
-        var propertiesMock = new Mock<IBasicProperties>();
         _channelMock
             .Setup(c => c.IsOpen)
             .Returns(true);
-        _channelMock
-            .Setup(c => c.CreateBasicProperties())
-            .Returns(propertiesMock.Object);
-
-        // Act
-        await _service.PublishOrderCreatedAsync(message);
-
-        // Assert
-        _channelMock.Verify(c => c.BasicPublish(
-            It.Is<string>(e => e == RabbitMqConstants.ExchangeName),
-            It.Is<string>(r => r == RabbitMqConstants.RoutingKey),
-            It.IsAny<bool>(),
-            It.IsAny<IBasicProperties>(),
-            It.Is<ReadOnlyMemory<byte>>(b => b.Length > 0)
-        ), Times.AtLeastOnce);
     }
 
     [Fact]
-    public void Dispose_ShouldCloseConnectionAndChannel()
+    public void Constructor_WithConnection_ShouldNotCreateChannelEagerly()
     {
-        // Arrange
         var service = new RabbitMqPublisherService(_connectionMock.Object);
 
-        // Act
+        service.Should().NotBeNull();
+        _connectionMock.Verify(c => c.CreateModel(), Times.Never);
+    }
+
+    [Fact]
+    public async Task PublishOrderCreatedAsync_ShouldDeclareTopologyAndPublishMessageToPipeline()
+    {
+        var service = new RabbitMqPublisherService(_connectionMock.Object);
+        var message = OrderCreatedMessage.Create(
+            new Order("product-1", 5, "client-1"),
+            Guid.NewGuid());
+
+        var propertiesMock = new Mock<IBasicProperties>();
+        _channelMock.Setup(c => c.CreateBasicProperties()).Returns(propertiesMock.Object);
+
+        await service.PublishOrderCreatedAsync(message);
+
+        _connectionMock.Verify(c => c.CreateModel(), Times.Once);
+        _channelMock.Verify(c => c.ExchangeDeclare(
+            RabbitMqConstants.ExchangeName,
+            ExchangeType.Direct,
+            true,
+            false,
+            null), Times.Once);
+        _channelMock.Verify(c => c.BasicPublish(
+            RabbitMqConstants.ExchangeName,
+            RabbitMqConstants.RoutingKey,
+            true,
+            It.IsAny<IBasicProperties>(),
+            It.Is<ReadOnlyMemory<byte>>(b => b.Length > 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldPublishToSpecifiedExchangeAndRoutingKey()
+    {
+        var service = new RabbitMqPublisherService(_connectionMock.Object);
+        var propertiesMock = new Mock<IBasicProperties>();
+        _channelMock.Setup(c => c.CreateBasicProperties()).Returns(propertiesMock.Object);
+
+        await service.PublishAsync("ex", "rk", "{\"x\":1}", Guid.NewGuid(), Guid.NewGuid());
+
+        _channelMock.Verify(c => c.BasicPublish(
+            "ex",
+            "rk",
+            true,
+            It.IsAny<IBasicProperties>(),
+            It.Is<ReadOnlyMemory<byte>>(b => b.Length > 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Dispose_AfterPublish_ShouldCloseChannelAndConnection()
+    {
+        var service = new RabbitMqPublisherService(_connectionMock.Object);
+        var message = OrderCreatedMessage.Create(new Order("product-1", 5, "client-1"), Guid.NewGuid());
+        _channelMock.Setup(c => c.CreateBasicProperties()).Returns(Mock.Of<IBasicProperties>());
+
+        await service.PublishOrderCreatedAsync(message);
         service.Dispose();
 
-        // Assert
         _channelMock.Verify(c => c.Close(), Times.AtLeastOnce);
         _channelMock.Verify(c => c.Dispose(), Times.AtLeastOnce);
         _connectionMock.Verify(c => c.Close(), Times.AtLeastOnce);

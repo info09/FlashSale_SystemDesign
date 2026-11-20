@@ -2,130 +2,54 @@ using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using System.Text;
-using System.Text.Json;
 
 namespace FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 
 /// <summary>
 /// Triển khai IRabbitMqPublisherService sử dụng RabbitMQ.Client.
-/// Triển khai Publish OrderCreatedMessage vào RabbitMQ Queue (OrderPipeline).
-/// Thuật ngữ chuẩn theo docs/domain-glossary.md: RabbitMQ, Queue, OrderPipeline, Message.
-/// Không được gọi là: IRabbitMqClient, IRabbitMqProducer, IRabbitMqSender.
+/// Hỗ trợ kết nối/publish lazy để không chặn khởi động ứng dụng khi broker chưa sẵn sàng.
 /// </summary>
 public class RabbitMqPublisherService : IRabbitMqPublisherService, IDisposable
 {
-    private readonly IConnection _connection;
-    private readonly IModel _channel;
+    private readonly IRabbitMqConnectionProvider? _connectionProvider;
+    private readonly IConnection? _fixedConnection;
+    private readonly RabbitMqConnectionProvider? _ownedProvider;
+    private readonly object _fixedChannelSync = new();
+    private IModel? _fixedChannel;
+    private bool _topologyDeclaredOnFixedChannel;
+    private bool _disposed;
 
     public RabbitMqPublisherService(string connectionString)
-        : this(new ConnectionFactory
-        {
-            Uri = new Uri(connectionString),
-            AutomaticRecoveryEnabled = true,
-            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
-        }.CreateConnection())
     {
+        _ownedProvider = new RabbitMqConnectionProvider(connectionString);
+        _connectionProvider = _ownedProvider;
+    }
+
+    public RabbitMqPublisherService(IRabbitMqConnectionProvider connectionProvider)
+    {
+        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
     }
 
     public RabbitMqPublisherService(IConnection connection)
     {
-        _connection = connection;
-        _channel = _connection.CreateModel();
-
-        // Khai báo Exchange (durable để soprav lại khi broker restart)
-        _channel.ExchangeDeclare(
-            exchange: RabbitMqConstants.ExchangeName,
-            type: ExchangeType.Direct,
-            durable: true,
-            autoDelete: false);
-
-        // Khai báo Dead Letter Exchange
-        _channel.ExchangeDeclare(
-            exchange: RabbitMqConstants.DeadLetterExchangeName,
-            type: ExchangeType.Direct,
-            durable: true,
-            autoDelete: false);
-
-        // Khai báo Queue chính với arguments DLX
-        var queueArgs = new Dictionary<string, object>
-        {
-            { "x-dead-letter-exchange", RabbitMqConstants.DeadLetterExchangeName },
-            { "x-dead-letter-routing-key", RabbitMqConstants.DeadLetterRoutingKey },
-            { "x-max-length", 100000 },
-            { "x-message-ttl", 86400000 } // 24 hours
-        };
-
-        _channel.QueueDeclare(
-            queue: RabbitMqConstants.QueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: queueArgs);
-
-        // Bind Queue vào Exchange với Routing Key
-        _channel.QueueBind(
-            queue: RabbitMqConstants.QueueName,
-            exchange: RabbitMqConstants.ExchangeName,
-            routingKey: RabbitMqConstants.RoutingKey);
-
-        // Khai báo Dead Letter Queue
-        _channel.QueueDeclare(
-            queue: RabbitMqConstants.DeadLetterQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
-
-        _channel.QueueBind(
-            queue: RabbitMqConstants.DeadLetterQueueName,
-            exchange: RabbitMqConstants.DeadLetterExchangeName,
-            routingKey: RabbitMqConstants.DeadLetterRoutingKey);
-
-        // Khai báo Order Notification Exchange/Queue (downstream consumer)
-        _channel.ExchangeDeclare(
-            exchange: RabbitMqConstants.OrderNotificationExchangeName,
-            type: ExchangeType.Direct,
-            durable: true,
-            autoDelete: false);
-
-        _channel.QueueDeclare(
-            queue: RabbitMqConstants.OrderNotificationQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
-
-        _channel.QueueBind(
-            queue: RabbitMqConstants.OrderNotificationQueueName,
-            exchange: RabbitMqConstants.OrderNotificationExchangeName,
-            routingKey: RabbitMqConstants.OrderNotificationRoutingKey);
+        _fixedConnection = connection ?? throw new ArgumentNullException(nameof(connection));
     }
 
-    public async Task PublishOrderCreatedAsync(OrderCreatedMessage orderCreatedMessage, CancellationToken cancellationToken = default)
+    public Task PublishOrderCreatedAsync(OrderCreatedMessage orderCreatedMessage, CancellationToken cancellationToken = default)
     {
         var messageJson = orderCreatedMessage.ToJson();
-        var body = Encoding.UTF8.GetBytes(messageJson);
-
-        var properties = _channel.CreateBasicProperties();
-        properties.Persistent = true;
-        properties.MessageId = orderCreatedMessage.MessageId.ToString();
-        properties.Timestamp = new AmqpTimestamp(orderCreatedMessage.OccurredOn.ToUnixTimeSeconds());
-        properties.ContentType = "application/json";
-        properties.CorrelationId = orderCreatedMessage.CorrelationId.ToString();
-
-        _channel.BasicPublish(
-            exchange: RabbitMqConstants.ExchangeName,
-            routingKey: RabbitMqConstants.RoutingKey,
-            mandatory: true,
-            basicProperties: properties,
-            body: body);
-
-        await Task.CompletedTask;
+        return PublishCoreAsync(
+            RabbitMqConstants.ExchangeName,
+            RabbitMqConstants.RoutingKey,
+            messageJson,
+            orderCreatedMessage.CorrelationId,
+            orderCreatedMessage.MessageId,
+            orderCreatedMessage.OccurredOn,
+            cancellationToken);
     }
 
-    public async Task PublishAsync(
+    public Task PublishAsync(
         string exchange,
         string routingKey,
         string messageJson,
@@ -133,31 +57,179 @@ public class RabbitMqPublisherService : IRabbitMqPublisherService, IDisposable
         Guid? messageId = null,
         CancellationToken cancellationToken = default)
     {
-        var body = Encoding.UTF8.GetBytes(messageJson);
+        return PublishCoreAsync(
+            exchange,
+            routingKey,
+            messageJson,
+            correlationId,
+            messageId ?? Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            cancellationToken);
+    }
 
-        var properties = _channel.CreateBasicProperties();
+    private Task PublishCoreAsync(
+        string exchange,
+        string routingKey,
+        string messageJson,
+        Guid correlationId,
+        Guid messageId,
+        DateTimeOffset occurredOn,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_fixedConnection is not null)
+        {
+            PublishWithFixedConnection(exchange, routingKey, messageJson, correlationId, messageId, occurredOn);
+            return Task.CompletedTask;
+        }
+
+        if (_connectionProvider is null)
+            throw new InvalidOperationException("Không có RabbitMQ connection provider.");
+
+        var connection = _connectionProvider.GetConnection();
+        using var channel = connection.CreateModel();
+        DeclareTopology(channel);
+        Publish(channel, exchange, routingKey, messageJson, correlationId, messageId, occurredOn);
+        return Task.CompletedTask;
+    }
+
+    private void PublishWithFixedConnection(
+        string exchange,
+        string routingKey,
+        string messageJson,
+        Guid correlationId,
+        Guid messageId,
+        DateTimeOffset occurredOn)
+    {
+        lock (_fixedChannelSync)
+        {
+            if (_fixedChannel is null || !_fixedChannel.IsOpen)
+            {
+                try { _fixedChannel?.Dispose(); } catch { /* ignore */ }
+                _fixedChannel = _fixedConnection!.CreateModel();
+                _topologyDeclaredOnFixedChannel = false;
+            }
+
+            if (!_topologyDeclaredOnFixedChannel)
+            {
+                DeclareTopology(_fixedChannel);
+                _topologyDeclaredOnFixedChannel = true;
+            }
+
+            Publish(_fixedChannel, exchange, routingKey, messageJson, correlationId, messageId, occurredOn);
+        }
+    }
+
+    private static void DeclareTopology(IModel channel)
+    {
+        channel.ExchangeDeclare(
+            exchange: RabbitMqConstants.ExchangeName,
+            type: ExchangeType.Direct,
+            durable: true,
+            autoDelete: false);
+
+        channel.ExchangeDeclare(
+            exchange: RabbitMqConstants.DeadLetterExchangeName,
+            type: ExchangeType.Direct,
+            durable: true,
+            autoDelete: false);
+
+        var queueArgs = new Dictionary<string, object>
+        {
+            { "x-dead-letter-exchange", RabbitMqConstants.DeadLetterExchangeName },
+            { "x-dead-letter-routing-key", RabbitMqConstants.DeadLetterRoutingKey },
+            { "x-max-length", 100000 },
+            { "x-message-ttl", 86400000 }
+        };
+
+        channel.QueueDeclare(
+            queue: RabbitMqConstants.QueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: queueArgs);
+
+        channel.QueueBind(
+            queue: RabbitMqConstants.QueueName,
+            exchange: RabbitMqConstants.ExchangeName,
+            routingKey: RabbitMqConstants.RoutingKey);
+
+        channel.QueueDeclare(
+            queue: RabbitMqConstants.DeadLetterQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        channel.QueueBind(
+            queue: RabbitMqConstants.DeadLetterQueueName,
+            exchange: RabbitMqConstants.DeadLetterExchangeName,
+            routingKey: RabbitMqConstants.DeadLetterRoutingKey);
+
+        channel.ExchangeDeclare(
+            exchange: RabbitMqConstants.OrderNotificationExchangeName,
+            type: ExchangeType.Direct,
+            durable: true,
+            autoDelete: false);
+
+        channel.QueueDeclare(
+            queue: RabbitMqConstants.OrderNotificationQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        channel.QueueBind(
+            queue: RabbitMqConstants.OrderNotificationQueueName,
+            exchange: RabbitMqConstants.OrderNotificationExchangeName,
+            routingKey: RabbitMqConstants.OrderNotificationRoutingKey);
+    }
+
+    private static void Publish(
+        IModel channel,
+        string exchange,
+        string routingKey,
+        string messageJson,
+        Guid correlationId,
+        Guid messageId,
+        DateTimeOffset occurredOn)
+    {
+        var body = Encoding.UTF8.GetBytes(messageJson);
+        var properties = channel.CreateBasicProperties();
         properties.Persistent = true;
-        properties.MessageId = messageId?.ToString() ?? Guid.NewGuid().ToString();
-        properties.Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        properties.MessageId = messageId.ToString();
+        properties.Timestamp = new AmqpTimestamp(occurredOn.ToUnixTimeSeconds());
         properties.ContentType = "application/json";
         properties.CorrelationId = correlationId.ToString();
 
-        _channel.BasicPublish(
+        channel.BasicPublish(
             exchange: exchange,
             routingKey: routingKey,
             mandatory: true,
             basicProperties: properties,
             body: body);
-
-        await Task.CompletedTask;
     }
 
     public void Dispose()
     {
-        _channel?.Close();
-        _channel?.Dispose();
-        _connection?.Close();
-        _connection?.Dispose();
-        GC.SuppressFinalize(this);
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_fixedConnection is not null)
+        {
+            lock (_fixedChannelSync)
+            {
+                try { _fixedChannel?.Close(); } catch { /* ignore */ }
+                try { _fixedChannel?.Dispose(); } catch { /* ignore */ }
+                _fixedChannel = null;
+            }
+
+            try { _fixedConnection.Close(); } catch { /* ignore */ }
+            try { _fixedConnection.Dispose(); } catch { /* ignore */ }
+            return;
+        }
+
+        _ownedProvider?.Dispose();
     }
 }

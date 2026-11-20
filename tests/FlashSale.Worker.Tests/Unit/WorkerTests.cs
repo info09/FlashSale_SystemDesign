@@ -1,15 +1,13 @@
 using FluentAssertions;
 using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
-using FlashSale.Domain.Entities;
 using FlashSale.Domain;
+using FlashSale.Domain.Entities;
 using FlashSale.Domain.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using FlashSale.Worker.Consumers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
 using Xunit;

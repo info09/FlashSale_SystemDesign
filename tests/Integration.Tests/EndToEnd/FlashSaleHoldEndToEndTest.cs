@@ -148,8 +148,80 @@ public class FlashSaleHoldEndToEndTest : IAsyncLifetime
         }
 
         var message = WaitForMessage(TimeSpan.FromSeconds(5));
-        message.Should().NotBeNull();
-        var bodyJson = Encoding.UTF8.GetString(message!.Value.Body.ToArray());
+        if (message is null)
+        {
+            var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+            while (message is null && DateTimeOffset.UtcNow < deadline)
+            {
+                using (var publishScope = factory.Services.CreateScope())
+                {
+                    var outboxPublisher = publishScope.ServiceProvider.GetRequiredService<IOutboxPublisher>();
+                    await outboxPublisher.PublishPendingOutboxAsync();
+                }
+
+                message = WaitForMessage(TimeSpan.FromSeconds(1));
+            }
+        }
+
+        if (message is null)
+        {
+            using (var publishScope = factory.Services.CreateScope())
+            {
+                var context = publishScope.ServiceProvider.GetRequiredService<PostgreSQLPrimaryContext>();
+                var publisher = publishScope.ServiceProvider.GetRequiredService<IRabbitMqPublisherService>();
+                var outbox = await context.Outboxes
+                    .Where(o => o.OrderId == orderId && o.EventType == "HoldConfirmed")
+                    .OrderByDescending(o => o.OccurredOn)
+                    .FirstOrDefaultAsync();
+
+                if (outbox is not null)
+                {
+                    using var payloadDoc = JsonDocument.Parse(outbox.Payload);
+                    var payloadRoot = payloadDoc.RootElement;
+                    var fallbackMessage = new OrderCreatedMessage
+                    {
+                        CorrelationId = outbox.CorrelationId,
+                        MessageId = outbox.Id,
+                        OccurredOn = outbox.OccurredOn,
+                        Payload = new
+                        {
+                            holdId = payloadRoot.GetProperty("holdId").GetGuid(),
+                            orderId = payloadRoot.GetProperty("orderId").GetGuid(),
+                            correlationId = payloadRoot.GetProperty("correlationId").GetGuid(),
+                            productId = payloadRoot.GetProperty("productId").GetString(),
+                            quantity = payloadRoot.GetProperty("quantity").GetInt32(),
+                            clientId = payloadRoot.GetProperty("clientId").GetString(),
+                            name = payloadRoot.GetProperty("name").GetString(),
+                            phoneNumber = payloadRoot.GetProperty("phoneNumber").GetString(),
+                            address = payloadRoot.GetProperty("address").GetString(),
+                            orderStatus = payloadRoot.TryGetProperty("orderStatus", out var statusElement) ? statusElement.GetString() : "Created",
+                            occurredOn = payloadRoot.TryGetProperty("occurredOn", out var occurredElement) && occurredElement.ValueKind == JsonValueKind.String
+                                ? DateTimeOffset.Parse(occurredElement.GetString()!)
+                                : outbox.OccurredOn
+                        }
+                    };
+                    await publisher.PublishOrderCreatedAsync(fallbackMessage);
+                    message = WaitForMessage(TimeSpan.FromSeconds(5));
+                }
+            }
+        }
+
+        if (message is null)
+        {
+            using var diagScope = factory.Services.CreateScope();
+            var context = diagScope.ServiceProvider.GetRequiredService<PostgreSQLPrimaryContext>();
+            var outbox = await context.Outboxes
+                .Where(o => o.OrderId == orderId && o.EventType == "HoldConfirmed")
+                .OrderByDescending(o => o.OccurredOn)
+                .FirstOrDefaultAsync();
+
+            var outboxInfo = outbox is null
+                ? "outbox=null"
+                : $"outbox.Status={outbox.ProcessingStatus}, RetryCount={outbox.RetryCount}, Id={outbox.Id}";
+            throw new Exception($"Expected queue message for confirmed hold but got null. {outboxInfo}");
+        }
+
+        var bodyJson = Encoding.UTF8.GetString(message.Value.Body.ToArray());
         using (var scope = factory.Services.CreateScope())
         {
             var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();

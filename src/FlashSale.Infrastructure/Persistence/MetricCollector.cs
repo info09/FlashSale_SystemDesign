@@ -1,12 +1,8 @@
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain;
 using FlashSale.Domain.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.Redis;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using StackExchange.Redis;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FlashSale.Infrastructure.Persistence;
 
@@ -19,18 +15,18 @@ namespace FlashSale.Infrastructure.Persistence;
 public class MetricCollector : IMetricCollector
 {
     private readonly IDatabase _redisDatabase;
-    private readonly IConnection _rabbitMqConnection;
+    private readonly IRabbitMqConnectionProvider _rabbitMqConnectionProvider;
     private readonly IInventoryRepository _inventoryRepository;
     private readonly ILogger<MetricCollector> _logger;
 
     public MetricCollector(
         IDatabase redisDatabase,
-        IConnection rabbitMqConnection,
+        IRabbitMqConnectionProvider rabbitMqConnectionProvider,
         IInventoryRepository inventoryRepository,
         ILogger<MetricCollector> logger)
     {
         _redisDatabase = redisDatabase;
-        _rabbitMqConnection = rabbitMqConnection;
+        _rabbitMqConnectionProvider = rabbitMqConnectionProvider;
         _inventoryRepository = inventoryRepository;
         _logger = logger;
     }
@@ -59,15 +55,18 @@ public class MetricCollector : IMetricCollector
     /// Su dung QueueDeclare(passive: true) de lay thong tin queue khong tac dong den du lieu.
     /// Neu queue chua ton tai, tu dong khai bao moi de tranh loi.
     /// </summary>
-    public async Task<double> GetQueueDepthAsync(CancellationToken cancellationToken = default)
+    public Task<double> GetQueueDepthAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var channel = _rabbitMqConnection.CreateModel();
+            if (!_rabbitMqConnectionProvider.TryGetConnection(out var connection) || connection is null || !connection.IsOpen)
+                return Task.FromResult(0d);
+
+            using var channel = connection.CreateModel();
             try
             {
                 var result = channel.QueueDeclarePassive(RabbitMqConstants.QueueName);
-                return result.MessageCount;
+                return Task.FromResult((double)result.MessageCount);
             }
             catch (Exception ex) when (ex.Message.Contains("NOT_FOUND") || ex.Message.Contains("404"))
             {
@@ -78,13 +77,13 @@ public class MetricCollector : IMetricCollector
                     exclusive: false,
                     autoDelete: false,
                     arguments: null);
-                return 0;
+                return Task.FromResult(0d);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Khong the lay QueueDepth tu RabbitMQ.");
-            return 0;
+            return Task.FromResult(0d);
         }
     }
 
@@ -92,15 +91,18 @@ public class MetricCollector : IMetricCollector
     /// Lay so luong message trong Dead Letter Queue (order_pipeline_dlq) (DlqSize).
     /// Neu queue chua ton tai, tu dong khai bao moi de tranh loi.
     /// </summary>
-    public async Task<double> GetDlqSizeAsync(CancellationToken cancellationToken = default)
+    public Task<double> GetDlqSizeAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var channel = _rabbitMqConnection.CreateModel();
+            if (!_rabbitMqConnectionProvider.TryGetConnection(out var connection) || connection is null || !connection.IsOpen)
+                return Task.FromResult(0d);
+
+            using var channel = connection.CreateModel();
             try
             {
                 var result = channel.QueueDeclarePassive(RabbitMqConstants.DeadLetterQueueName);
-                return result.MessageCount;
+                return Task.FromResult((double)result.MessageCount);
             }
             catch (Exception ex) when (ex.Message.Contains("NOT_FOUND") || ex.Message.Contains("404"))
             {
@@ -111,13 +113,13 @@ public class MetricCollector : IMetricCollector
                     exclusive: false,
                     autoDelete: false,
                     arguments: null);
-                return 0;
+                return Task.FromResult(0d);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Khong the lay DlqSize tu RabbitMQ.");
-            return 0;
+            return Task.FromResult(0d);
         }
     }
 }

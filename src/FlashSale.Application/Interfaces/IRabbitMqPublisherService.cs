@@ -1,6 +1,6 @@
 using FlashSale.Application.Features.Inventory.Events;
 
-namespace FlashSale.Infrastructure.ExternalServices.RabbitMQ;
+namespace FlashSale.Application.Interfaces;
 
 /// <summary>
 /// Giao dien dich vu publish MessageOrderCreated vao RabbitMQ Queue.

@@ -7,5 +7,6 @@ public enum HoldReleaseStatus
     AlreadyReleased = 2,
     Consumed = 3,
     ExpiredReleased = 4,
-    Invalid = 5
+    Invalid = 5,
+    NotOwned = 6
 }

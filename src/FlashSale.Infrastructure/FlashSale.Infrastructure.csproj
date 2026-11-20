@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FlashSale.Domain\FlashSale.Domain.csproj" />
     <ProjectReference Include="..\FlashSale.Application\FlashSale.Application.csproj" />
+    <ProjectReference Include="..\FlashSale.Domain\FlashSale.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

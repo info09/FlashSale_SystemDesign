@@ -1,12 +1,12 @@
 using FlashSale.Application.Interfaces;
 using FlashSale.Domain.Interfaces;
+using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using FlashSale.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using RabbitMQ.Client;
 using System.Net;
 using System.Text.Json;
 using Testcontainers.PostgreSql;
@@ -63,15 +63,8 @@ public class MetricsControllerIntegrationTest : IAsyncLifetime
 
             builder.ConfigureServices(services =>
             {
-                services.AddSingleton<RabbitMQ.Client.IConnection>(sp =>
-                {
-                    var factory = new ConnectionFactory
-                    {
-                        Uri = new Uri(_rabbitMqContainer.GetConnectionString()),
-                        AutomaticRecoveryEnabled = false
-                    };
-                    return factory.CreateConnection();
-                });
+                services.AddSingleton<IRabbitMqConnectionProvider>(_ =>
+                    new RabbitMqConnectionProvider(_rabbitMqContainer.GetConnectionString()));
             });
         });
     }

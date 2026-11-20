@@ -24,7 +24,7 @@ public class OutboxService : IOutboxService
     /// <summary>
     /// Thêm một ghi Outbox mới (chưa được xử lý) liên quan đến một Order.
     /// </summary>
-    public async Task AddOutboxAsync(Guid orderId, string eventType, string payload, Guid correlationId, CancellationToken cancellationToken = default)
+    public async Task<Outbox> AddOutboxAsync(Guid orderId, string eventType, string payload, Guid correlationId, CancellationToken cancellationToken = default)
     {
         if (orderId == Guid.Empty)
             throw new ArgumentException("OrderId không được để trống", nameof(orderId));
@@ -41,6 +41,7 @@ public class OutboxService : IOutboxService
 
         var outbox = new Outbox(orderId, eventType, payload, correlationId);
         await _outboxRepository.AddAsync(outbox, cancellationToken);
+        return outbox;
     }
 
     /// <summary>

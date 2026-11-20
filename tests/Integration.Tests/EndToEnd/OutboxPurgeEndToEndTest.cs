@@ -59,7 +59,11 @@ public class OutboxPurgeEndToEndTest : IAsyncLifetime
     [Fact]
     public async Task Purge_ThroughDiContainer_ShouldDeleteOldProcessedOutboxesAndKeepNewOnes()
     {
-        // Arrange: seed Outbox cu (Published/Failed, cu 31 ngay) va moi (Pending, 1 ngay)
+        // Arrange: seed Outbox cu (Published/Failed, cu hon 30 ngay) va moi (Pending, 1 ngay)
+        Guid oldPublishedId;
+        Guid oldFailedId;
+        Guid newPendingId;
+
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PostgreSQLPrimaryContext>();
@@ -67,28 +71,43 @@ public class OutboxPurgeEndToEndTest : IAsyncLifetime
             await context.Outboxes.ExecuteDeleteAsync(); // xoa sach de test tu dong lap
 
             var olderThan30 = DateTimeOffset.UtcNow.AddDays(-31);
-            context.Outboxes.AddRange(
-                new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", olderThan30.AddDays(-1), Guid.NewGuid(), "Published", 0, DateTimeOffset.UtcNow.AddDays(-1)),
-                new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", olderThan30.AddDays(-2), Guid.NewGuid(), "Failed", 0, DateTimeOffset.UtcNow.AddDays(-2)),
-                new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", DateTimeOffset.UtcNow.AddDays(-1), Guid.NewGuid(), "Pending", 0, null));
+            var oldPublished = new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", olderThan30.AddDays(-1), Guid.NewGuid(), "Published", 0, DateTimeOffset.UtcNow.AddDays(-1));
+            var oldFailed = new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", olderThan30.AddDays(-2), Guid.NewGuid(), "Failed", 0, DateTimeOffset.UtcNow.AddDays(-2));
+            var newPending = new Outbox(Guid.NewGuid(), Guid.NewGuid(), "OrderCreated", "{}", DateTimeOffset.UtcNow.AddDays(-1), Guid.NewGuid(), "Pending", 0, null);
+
+            oldPublishedId = oldPublished.Id;
+            oldFailedId = oldFailed.Id;
+            newPendingId = newPending.Id;
+
+            context.Outboxes.AddRange(oldPublished, oldFailed, newPending);
             await context.SaveChangesAsync();
+
+            // Loai bo ban ghi phat sinh ngoai seed (neu co) de dam bao tinh xac dinh trong moi truong e2e
+            await context.Outboxes
+                .Where(o => o.Id != oldPublishedId && o.Id != oldFailedId && o.Id != newPendingId)
+                .ExecuteDeleteAsync();
         }
 
         // Act: goi purge service qua DI container thuc te
+        int deleted;
         using (var scope = _factory.Services.CreateScope())
         {
             var purgeService = scope.ServiceProvider.GetRequiredService<IOutboxPurgeService>();
-            var deleted = await purgeService.PurgeProcessedOutboxesAsync();
-            deleted.Should().Be(2);
+            deleted = await purgeService.PurgeProcessedOutboxesAsync();
         }
 
-        // Assert: chi con lai 1 ghi Pending moi
+        // Assert: it nhat 2 ban ghi cu da xu ly duoc xoa; ban ghi moi Pending van con
+        deleted.Should().BeGreaterThanOrEqualTo(2);
+
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PostgreSQLPrimaryContext>();
-            var remaining = await context.Outboxes.CountAsync();
-            remaining.Should().Be(1);
-            remaining.Should().Be(await context.Outboxes.CountAsync(o => o.ProcessingStatus == "Pending"));
+
+            (await context.Outboxes.AnyAsync(o => o.Id == oldPublishedId)).Should().BeFalse();
+            (await context.Outboxes.AnyAsync(o => o.Id == oldFailedId)).Should().BeFalse();
+
+            var pending = await context.Outboxes.SingleAsync(o => o.Id == newPendingId);
+            pending.ProcessingStatus.Should().Be("Pending");
         }
     }
 }

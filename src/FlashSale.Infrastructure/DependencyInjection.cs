@@ -101,19 +101,11 @@ public static class DependencyInjection
         // Đăng ký MetricCollector (thu thap metric tu infra, FR-06, NFR-07)
         services.AddScoped<IMetricCollector, MetricCollector>();
 
-        // Đăng ký RabbitMqPublisherService (trien khai IRabbitMqPublisherService, publish OrderCreatedMessage vao Queue)
+        // Đăng ký kết nối/publisher RabbitMQ theo kiểu lazy (không kết nối khi khởi động ứng dụng)
         var rabbitMqConnectionString = configuration["RABBITMQ_CONNECTION_STRING"] ?? "amqp://guest:guest@localhost:5672/";
-        services.AddSingleton<IRabbitMqPublisherService>(_ => new RabbitMqPublisherService(rabbitMqConnectionString));
-
-        // Đăng ký IConnection RabbitMQ (singleton) cho HealthCheck
-        var rabbitFactory = new ConnectionFactory
-        {
-            Uri = new Uri(rabbitMqConnectionString),
-            AutomaticRecoveryEnabled = false,
-            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
-        };
-        var rabbitConnection = rabbitFactory.CreateConnection();
-        services.AddSingleton<RabbitMQ.Client.IConnection>(rabbitConnection);
+        services.AddSingleton<IRabbitMqConnectionProvider>(_ => new RabbitMqConnectionProvider(rabbitMqConnectionString));
+        services.AddSingleton<IRabbitMqPublisherService>(sp =>
+            new RabbitMqPublisherService(sp.GetRequiredService<IRabbitMqConnectionProvider>()));
 
         return services;
     }

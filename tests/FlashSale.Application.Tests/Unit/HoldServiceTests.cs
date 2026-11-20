@@ -1,4 +1,5 @@
 using FlashSale.Application.Features.Hold.Commands;
+using FlashSale.Application.Features.Inventory.Events;
 using FlashSale.Application.Interfaces;
 using FlashSale.Application.Services;
 using FlashSale.Domain.Entities;
@@ -6,6 +7,7 @@ using FlashSale.Domain.Exceptions;
 using FlashSale.Domain.Interfaces;
 using FlashSale.Domain.Models;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -17,6 +19,8 @@ public class HoldServiceTests
     private readonly Mock<IInformationCustomerRepository> _informationCustomerRepository = new();
     private readonly Mock<IOutboxService> _outboxService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IRabbitMqPublisherService> _rabbitMqPublisherService = new();
+    private readonly Mock<ILogger<HoldService>> _logger = new();
     private readonly HoldService _sut;
 
     public HoldServiceTests()
@@ -25,7 +29,9 @@ public class HoldServiceTests
             _holdRepository.Object,
             _informationCustomerRepository.Object,
             _outboxService.Object,
-            _unitOfWork.Object);
+            _unitOfWork.Object,
+            _rabbitMqPublisherService.Object,
+            _logger.Object);
     }
 
     [Fact]
@@ -82,13 +88,18 @@ public class HoldServiceTests
     }
 
     [Fact]
-    public async Task ConfirmHoldAsync_WhenSuccess_ShouldConsumeHoldPersistCustomerAndAddOutbox()
+    public async Task ConfirmHoldAsync_WhenSuccess_ShouldConsumeHoldPersistCustomerAddOutboxAndPublish()
     {
         var holdId = Guid.NewGuid();
         var hold = new Hold(holdId, "p1", 2, "c1", DateTimeOffset.UtcNow.AddSeconds(30));
+        var outbox = new Outbox(Guid.NewGuid(), "HoldConfirmed", "{}", Guid.NewGuid());
+
         _holdRepository
             .Setup(x => x.ConsumeHoldAsync(holdId, "c1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new HoldConsumeResult(HoldConsumeStatus.Success, hold));
+        _outboxService
+            .Setup(x => x.AddOutboxAsync(It.IsAny<Guid>(), "HoldConfirmed", It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(outbox);
 
         var result = await _sut.ConfirmHoldAsync(new ConfirmHoldCommand(holdId, "c1", "Name", "0900", "Addr"));
 
@@ -105,11 +116,41 @@ public class HoldServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
         _outboxService.Verify(x => x.AddOutboxAsync(
             result.OrderId,
-            It.IsAny<string>(),
+            "HoldConfirmed",
             It.Is<string>(p => p.Contains(holdId.ToString()) && p.Contains("Name") && p.Contains("0900") && p.Contains("Addr")),
             result.CorrelationId,
             It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(x => x.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _rabbitMqPublisherService.Verify(x => x.PublishOrderCreatedAsync(
+            It.Is<OrderCreatedMessage>(m => m.CorrelationId == result.CorrelationId && m.MessageId == outbox.Id),
+            It.IsAny<CancellationToken>()), Times.Once);
+        outbox.ProcessingStatus.Should().Be("Published");
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmHoldAsync_WhenImmediatePublishFails_ShouldKeepOutboxPendingForRetry()
+    {
+        var holdId = Guid.NewGuid();
+        var hold = new Hold(holdId, "p1", 2, "c1", DateTimeOffset.UtcNow.AddSeconds(30));
+        var outbox = new Outbox(Guid.NewGuid(), "HoldConfirmed", "{}", Guid.NewGuid());
+
+        _holdRepository
+            .Setup(x => x.ConsumeHoldAsync(holdId, "c1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HoldConsumeResult(HoldConsumeStatus.Success, hold));
+        _outboxService
+            .Setup(x => x.AddOutboxAsync(It.IsAny<Guid>(), "HoldConfirmed", It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(outbox);
+        _rabbitMqPublisherService
+            .Setup(x => x.PublishOrderCreatedAsync(It.IsAny<OrderCreatedMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("broker down"));
+
+        var result = await _sut.ConfirmHoldAsync(new ConfirmHoldCommand(holdId, "c1", "Name", "0900", "Addr"));
+
+        result.HoldId.Should().Be(holdId);
+        _unitOfWork.Verify(x => x.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        outbox.ProcessingStatus.Should().Be("Pending");
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

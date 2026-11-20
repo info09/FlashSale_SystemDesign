@@ -1,6 +1,5 @@
 using FlashSale.Application.Features.Hold.Commands;
 using FlashSale.Application.Interfaces;
-using FlashSale.Infrastructure.ExternalServices.RabbitMQ;
 using OrderCreatedMessage = FlashSale.Application.Features.Inventory.Events.OrderCreatedMessage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -154,7 +153,7 @@ public class FlashSaleController : ControllerBase
 
     /// <summary>
     /// Xác nhận hold và submit thông tin khách hàng.
-    /// Consume hold, lưu InformationCustomer, tạo Outbox payload và publish message để worker tạo Order.
+    /// Consume hold, lưu InformationCustomer, ghi Outbox và phát hành tạo Order (immediate + outbox fallback).
     /// </summary>
     [HttpPost("hold/{holdId:guid}/confirm")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
@@ -186,21 +185,6 @@ public class FlashSaleController : ControllerBase
             request.Name,
             request.PhoneNumber,
             request.Address));
-
-        var occurredOn = DateTimeOffset.UtcNow;
-        var orderCreatedMessage = OrderCreatedMessage.CreateFromHoldConfirmation(
-            result.HoldId,
-            result.OrderId,
-            result.ProductId,
-            result.Quantity,
-            result.ClientId,
-            request.Name.Trim(),
-            request.PhoneNumber.Trim(),
-            request.Address.Trim(),
-            result.CorrelationId,
-            occurredOn);
-
-        await _rabbitMqPublisherService.PublishOrderCreatedAsync(orderCreatedMessage);
 
         return Accepted(new
         {
